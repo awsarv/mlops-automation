@@ -7,10 +7,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./logs:/app
+      - ./logs:/app/logs
     environment:
-      - LOG_PATH=/app/api.log
-      - DB_PATH=/app/api_requests.db
+      - LOG_PATH=/app/logs/api.log
+      - DB_PATH=/app/logs/api_requests.db
 
   prometheus:
     image: prom/prometheus
