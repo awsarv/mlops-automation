@@ -3,6 +3,9 @@ name: CI/CD Deploy to EC2 with Monitoring
 on:
   push:
     branches: [mlops]
+  workflow_dispatch:
+  
+
 
 jobs:
   build-and-deploy:
