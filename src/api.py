@@ -40,8 +40,15 @@ c.execute(
     '''
     CREATE TABLE IF NOT EXISTS requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        MedInc REAL, HouseAge REAL, AveRooms REAL, AveBedrms REAL, Population REAL,
-        AveOccup REAL, Latitude REAL, Longitude REAL, Prediction REAL,
+        MedInc REAL,
+        HouseAge REAL,
+        AveRooms REAL,
+        AveBedrms REAL,
+        Population REAL,
+        AveOccup REAL,
+        Latitude REAL,
+        Longitude REAL,
+        Prediction REAL,
         Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     '''
