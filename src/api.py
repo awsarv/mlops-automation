@@ -1,0 +1,98 @@
+from fastapi import FastAPI, Response
+from pydantic import BaseModel
+import joblib
+import numpy as np
+import logging
+import sqlite3
+from prometheus_client import Counter, generate_latest
+
+# ----- Model Loading -----
+# Load the trained regression model
+model = joblib.load("models/best_model.pkl")
+
+# ----- API and Schema Setup -----
+app = FastAPI()
+
+# Pydantic schema for input validation
+class Features(BaseModel):
+    MedInc: float
+    HouseAge: float
+    AveRooms: float
+    AveBedrms: float
+    Population: float
+    AveOccup: float
+    Latitude: float
+    Longitude: float
+
+# ----- File Logging Setup -----
+logging.basicConfig(
+    filename="api.log",
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s"
+)
+
+# ----- SQLite Logging Setup -----
+conn = sqlite3.connect("api_requests.db", check_same_thread=False)
+c = conn.cursor()
+c.execute('''
+CREATE TABLE IF NOT EXISTS requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    MedInc REAL, HouseAge REAL, AveRooms REAL, AveBedrms REAL, Population REAL,
+    AveOccup REAL, Latitude REAL, Longitude REAL, Prediction REAL,
+    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+''')
+conn.commit()
+
+# ----- Prometheus Metric Setup -----
+PREDICTIONS = Counter("predictions_total", "Total prediction requests served")
+
+# ----- Prediction Endpoint -----
+@app.post("/predict")
+def predict(features: Features):
+    """
+    Receives JSON with California Housing features, returns predicted median house value.
+    Logs request to file and SQLite, updates Prometheus counter.
+    """
+    # Prepare input for model
+    data = np.array([[
+        features.MedInc, features.HouseAge, features.AveRooms, features.AveBedrms,
+        features.Population, features.AveOccup, features.Latitude, features.Longitude
+    ]])
+    prediction = float(model.predict(data)[0])
+
+    # File logging
+    logging.info(f"Request: {features.dict()} | Prediction: {prediction}")
+
+    # SQLite logging
+    c.execute('''
+    INSERT INTO requests (MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup, Latitude, Longitude, Prediction)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        features.MedInc, features.HouseAge, features.AveRooms, features.AveBedrms,
+        features.Population, features.AveOccup, features.Latitude, features.Longitude, prediction
+    ))
+    conn.commit()
+
+    # Prometheus metric
+    PREDICTIONS.inc()
+
+    return {"prediction": prediction}
+
+# ----- Metrics Endpoint for Prometheus -----
+@app.get("/metrics")
+def metrics():
+    """
+    Exposes Prometheus metrics for monitoring.
+    """
+    return Response(generate_latest(), media_type="text/plain")
+
+# ----- Demo Model Retraining Endpoint -----
+@app.post("/retrain")
+def retrain():
+    """
+    Demo endpoint for model retraining trigger.
+    """
+    logging.info("Retraining triggered!")
+    # In real scenario: load data, retrain, save new model, reload
+    return {"status": "Retraining triggered (not implemented fully in demo)"}

@@ -1,0 +1,36 @@
+{
+  "id": null,
+  "uid": "mlops-fastapi",
+  "title": "MLOps FastAPI Monitoring",
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Predictions",
+      "targets": [
+        {
+          "expr": "predictions_total",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "schemaVersion": 34,
+  "version": 1,
+  "refresh": "5s"
+}
