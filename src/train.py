@@ -34,8 +34,8 @@ with mlflow.start_run(run_name="LinearRegression") as run:
     mlflow.sklearn.log_model(model, "model")
     joblib.dump(model, "models/best_model.pkl")
     print(
-        f"Linear Regression: MSE={mse:.4f}, R2={r2:.4f}, "
-        f"Avg inference time={avg_inference_time:.6f}s"
+        "Linear Regression: MSE={:.4f}, R2={:.4f}, "
+        "Avg inference time={:.6f}s".format(mse, r2, avg_inference_time)
     )
 
 with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
@@ -56,8 +56,8 @@ with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
     if r2 > 0.7:
         joblib.dump(model, "models/best_model.pkl")
     print(
-        f"Decision Tree: MSE={mse:.4f}, R2={r2:.4f}, "
-        f"Avg inference time={avg_inference_time:.6f}s"
+        "Decision Tree: MSE={:.4f}, R2={:.4f}, "
+        "Avg inference time={:.6f}s".format(mse, r2, avg_inference_time)
     )
 
 print(

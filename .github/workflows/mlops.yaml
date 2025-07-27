@@ -4,11 +4,6 @@ on:
   push:
     branches: [mlops]
 
-env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_IMAGE_URI: ${{ secrets.ECR_IMAGE_URI }}
-  IMAGE_TAG: latest
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -30,25 +25,16 @@ jobs:
           pip install flake8
           flake8 src/
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build, tag, and push Docker image to ECR
+      - name: Build, tag, and push Docker image to Docker Hub
         run: |
-          docker build -t $ECR_IMAGE_URI .
-          docker push $ECR_IMAGE_URI
+          docker build -t mlopsdemo/housing-api:latest .
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
+            docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          docker push mlopsdemo/housing-api:latest
 
       - name: Create .env for Docker Compose
         run: |
-          echo "ECR_IMAGE_URI=${{ secrets.ECR_IMAGE_URI }}" > .env
-          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" >> .env
+          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" > .env
 
       - name: Save SSH key
         run: |
@@ -64,14 +50,10 @@ jobs:
         env:
           EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
           EC2_SSH_USER: ${{ secrets.EC2_SSH_USER }}
-          ECR_IMAGE_URI: ${{ secrets.ECR_IMAGE_URI }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          AWS_REGION: ${{ env.AWS_REGION }}
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2_deploy_key $EC2_SSH_USER@$EC2_PUBLIC_IP << EOF
             cd your-app-directory
-            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $(echo $ECR_IMAGE_URI | cut -d'/' -f1)
-            docker pull $ECR_IMAGE_URI
+            docker pull mlopsdemo/housing-api:latest
             docker-compose down || true
             docker-compose up -d --remove-orphans
           EOF

@@ -71,7 +71,9 @@ def predict(features: Features):
 
     # File logging
     logging.info(
-        f"Request: {features.dict()} | Prediction: {prediction}"
+        "Request: {} | Prediction: {}".format(
+            features.dict(), prediction
+        )
     )
 
     # SQLite logging

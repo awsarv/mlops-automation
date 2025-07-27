@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   app:
-    image: ${ECR_IMAGE_URI}
+    image: mlopsdemo/housing-api:latest
     container_name: housing-api
     restart: always
     ports:
