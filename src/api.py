@@ -7,7 +7,6 @@ import sqlite3
 from prometheus_client import Counter, generate_latest
 
 # ----- Model Loading -----
-# Load the trained regression model
 model = joblib.load("models/best_model.pkl")
 
 # ----- API and Schema Setup -----
@@ -35,14 +34,16 @@ logging.basicConfig(
 # ----- SQLite Logging Setup -----
 conn = sqlite3.connect("api_requests.db", check_same_thread=False)
 c = conn.cursor()
-c.execute('''
-CREATE TABLE IF NOT EXISTS requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    MedInc REAL, HouseAge REAL, AveRooms REAL, AveBedrms REAL, Population REAL,
-    AveOccup REAL, Latitude REAL, Longitude REAL, Prediction REAL,
-    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+c.execute(
+    '''
+    CREATE TABLE IF NOT EXISTS requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        MedInc REAL, HouseAge REAL, AveRooms REAL, AveBedrms REAL, Population REAL,
+        AveOccup REAL, Latitude REAL, Longitude REAL, Prediction REAL,
+        Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+    '''
 )
-''')
 conn.commit()
 
 # ----- Prometheus Metric Setup -----
@@ -52,18 +53,26 @@ PREDICTIONS = Counter("predictions_total", "Total prediction requests served")
 @app.post("/predict")
 def predict(features: Features):
     """
-    Receives JSON with California Housing features, returns predicted median house value.
+    Receives JSON with California Housing features,
+    returns predicted median house value.
     Logs request to file and SQLite, updates Prometheus counter.
     """
-    # Prepare input for model
     data = np.array([[
-        features.MedInc, features.HouseAge, features.AveRooms, features.AveBedrms,
-        features.Population, features.AveOccup, features.Latitude, features.Longitude
+        features.MedInc,
+        features.HouseAge,
+        features.AveRooms,
+        features.AveBedrms,
+        features.Population,
+        features.AveOccup,
+        features.Latitude,
+        features.Longitude
     ]])
     prediction = float(model.predict(data)[0])
 
     # File logging
-    logging.info(f"Request: {features.dict()} | Prediction: {prediction}")
+    logging.info(
+        f"Request: {features.dict()} | Prediction: {prediction}"
+    )
 
     # SQLite logging
     c.execute(
@@ -75,9 +84,15 @@ def predict(features: Features):
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
         (
-            features.MedInc, features.HouseAge, features.AveRooms,
-            features.AveBedrms, features.Population, features.AveOccup,
-            features.Latitude, features.Longitude, prediction
+            features.MedInc,
+            features.HouseAge,
+            features.AveRooms,
+            features.AveBedrms,
+            features.Population,
+            features.AveOccup,
+            features.Latitude,
+            features.Longitude,
+            prediction
         )
     )
     conn.commit()
@@ -102,5 +117,4 @@ def retrain():
     Demo endpoint for model retraining trigger.
     """
     logging.info("Retraining triggered!")
-    # In real scenario: load data, retrain, save new model, reload
     return {"status": "Retraining triggered (not implemented fully in demo)"}
