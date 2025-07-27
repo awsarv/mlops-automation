@@ -13,7 +13,7 @@ model = joblib.load("models/best_model.pkl")
 # ----- API and Schema Setup -----
 app = FastAPI()
 
-# Pydantic schema for input validation
+
 class Features(BaseModel):
     MedInc: float
     HouseAge: float
@@ -23,6 +23,7 @@ class Features(BaseModel):
     AveOccup: float
     Latitude: float
     Longitude: float
+
 
 # ----- File Logging Setup -----
 logging.basicConfig(
@@ -47,7 +48,7 @@ conn.commit()
 # ----- Prometheus Metric Setup -----
 PREDICTIONS = Counter("predictions_total", "Total prediction requests served")
 
-# ----- Prediction Endpoint -----
+
 @app.post("/predict")
 def predict(features: Features):
     """
@@ -65,13 +66,20 @@ def predict(features: Features):
     logging.info(f"Request: {features.dict()} | Prediction: {prediction}")
 
     # SQLite logging
-    c.execute('''
-    INSERT INTO requests (MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup, Latitude, Longitude, Prediction)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        features.MedInc, features.HouseAge, features.AveRooms, features.AveBedrms,
-        features.Population, features.AveOccup, features.Latitude, features.Longitude, prediction
-    ))
+    c.execute(
+        '''
+        INSERT INTO requests (
+            MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup,
+            Latitude, Longitude, Prediction
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''',
+        (
+            features.MedInc, features.HouseAge, features.AveRooms,
+            features.AveBedrms, features.Population, features.AveOccup,
+            features.Latitude, features.Longitude, prediction
+        )
+    )
     conn.commit()
 
     # Prometheus metric
@@ -79,7 +87,7 @@ def predict(features: Features):
 
     return {"prediction": prediction}
 
-# ----- Metrics Endpoint for Prometheus -----
+
 @app.get("/metrics")
 def metrics():
     """
@@ -87,7 +95,7 @@ def metrics():
     """
     return Response(generate_latest(), media_type="text/plain")
 
-# ----- Demo Model Retraining Endpoint -----
+
 @app.post("/retrain")
 def retrain():
     """

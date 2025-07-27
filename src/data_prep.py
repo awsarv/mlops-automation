@@ -1,7 +1,8 @@
-from sklearn.datasets import fetch_california_housing
+from sklearn.datasets import load_iris
 import pandas as pd
 
-housing = fetch_california_housing(as_frame=True)
-df = housing.frame
-df.to_csv('data/california_housing.csv', index=False)
-print("California housing data saved as data/california_housing.csv")
+# Load Iris dataset
+iris = load_iris(as_frame=True)
+df = iris.frame
+df.to_csv('data/iris.csv', index=False)
+print("Saved iris.csv in data/")
