@@ -8,6 +8,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 import joblib
 import time
 
+# ----- Load Data -----
 df = pd.read_csv("data/california_housing.csv")
 X = df.drop("MedHouseVal", axis=1)
 y = df["MedHouseVal"]
@@ -17,6 +18,9 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 mlflow.set_experiment("California-Housing-Regression")
 
+results = []
+
+# ----- Linear Regression -----
 with mlflow.start_run(run_name="LinearRegression") as run:
     model = LinearRegression()
     model.fit(X_train, y_train)
@@ -29,19 +33,20 @@ with mlflow.start_run(run_name="LinearRegression") as run:
     avg_inference_time = elapsed_time / len(X_test)
     mlflow.log_param("model", "LinearRegression")
     mlflow.log_metric("mse", mse)
-    mlflow.log_metric("r2_score", r2)
+    mlflow.log_metric("r2", r2)
     mlflow.log_metric("avg_inference_time", avg_inference_time)
     mlflow.sklearn.log_model(model, "model")
-    joblib.dump(model, "models/best_model.pkl")
+    # Save result for best model selection
+    results.append(("LinearRegression", model, mse, r2))
     print(
-        "Linear Regression: MSE={:.4f}, R2={:.4f}, "
-        "Avg inference time={:.6f}s".format(
-            mse, r2, avg_inference_time
-        )
+        f"Linear Regression: MSE={mse:.4f}, R2={r2:.4f}, "
+        f"Avg inference time={avg_inference_time:.6f}s"
     )
 
+# ----- Decision Tree -----
+max_depth = 5  # You can tune this for more runs
 with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
-    model = DecisionTreeRegressor()
+    model = DecisionTreeRegressor(max_depth=max_depth)
     model.fit(X_train, y_train)
     preds = model.predict(X_test)
     mse = mean_squared_error(y_test, preds)
@@ -51,20 +56,34 @@ with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
     elapsed_time = time.time() - start_time
     avg_inference_time = elapsed_time / len(X_test)
     mlflow.log_param("model", "DecisionTreeRegressor")
+    mlflow.log_param("max_depth", max_depth)
     mlflow.log_metric("mse", mse)
-    mlflow.log_metric("r2_score", r2)
+    mlflow.log_metric("r2", r2)
     mlflow.log_metric("avg_inference_time", avg_inference_time)
     mlflow.sklearn.log_model(model, "model")
-    if r2 > 0.7:
-        joblib.dump(model, "models/best_model.pkl")
+    results.append(("DecisionTreeRegressor", model, mse, r2))
     print(
-        "Decision Tree: MSE={:.4f}, R2={:.4f}, "
-        "Avg inference time={:.6f}s".format(
-            mse, r2, avg_inference_time
-        )
+        f"Decision Tree: MSE={mse:.4f}, R2={r2:.4f}, "
+        f"Avg inference time={avg_inference_time:.6f}s"
+    )
+
+# ----- Select Best Model -----
+# Choose best based on lowest MSE (or you can use highest R2)
+best = min(results, key=lambda x: x[2])  # (name, model, mse, r2)
+best_model_name, best_model, best_mse, best_r2 = best
+
+joblib.dump(best_model, "models/best_model.pkl")
+print(f"✅ Best model: {best_model_name} (MSE={best_mse:.4f}, R2={best_r2:.4f}) saved for deployment.")
+
+# ----- Register best model in MLflow Model Registry (Bonus) -----
+with mlflow.start_run(run_name=f"{best_model_name}-Best-Register"):
+    mlflow.sklearn.log_model(
+        best_model,
+        "model",
+        registered_model_name="BestHousingModel"
     )
 
 print(
     "Training complete! "
-    "Check MLflow UI to compare model performance and speed."
+    "Check MLflow UI on http://<your-ec2-ip>:5000 to compare model performance."
 )
