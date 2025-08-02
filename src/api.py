@@ -4,14 +4,18 @@ import joblib
 import numpy as np
 import logging
 import sqlite3
+import os
 from prometheus_client import Counter, generate_latest
+
 
 # ----- Load paths from environment -----
 log_path = os.getenv("LOG_PATH", "/app/logs/api.log")
 db_path = os.getenv("DB_PATH", "/app/logs/api_requests.db")
 
+
 # ----- Model Loading -----
 model = joblib.load("models/best_model.pkl")
+
 
 # ----- API and Schema Setup -----
 app = FastAPI()
@@ -30,37 +34,39 @@ class Features(BaseModel):
 
 # ----- File Logging Setup -----
 logging.basicConfig(
-    filename="api.log",
+    filename=log_path,
     level=logging.INFO,
-    format=(
-        "%(asctime)s %(levelname)s %(message)s"
-    )
+    format="%(asctime)s %(levelname)s %(message)s"
 )
 
+
 # ----- SQLite Logging Setup -----
-conn = sqlite3.connect("api_requests.db", check_same_thread=False)
+conn = sqlite3.connect(db_path, check_same_thread=False)
 c = conn.cursor()
 c.execute(
-    '''
-    CREATE TABLE IF NOT EXISTS requests (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        MedInc REAL,
-        HouseAge REAL,
-        AveRooms REAL,
-        AveBedrms REAL,
-        Population REAL,
-        AveOccup REAL,
-        Latitude REAL,
-        Longitude REAL,
-        Prediction REAL,
-        Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    (
+        "CREATE TABLE IF NOT EXISTS requests ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "MedInc REAL,"
+        "HouseAge REAL,"
+        "AveRooms REAL,"
+        "AveBedrms REAL,"
+        "Population REAL,"
+        "AveOccup REAL,"
+        "Latitude REAL,"
+        "Longitude REAL,"
+        "Prediction REAL,"
+        "Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
     )
-    '''
 )
 conn.commit()
 
+
 # ----- Prometheus Metric Setup -----
-PREDICTIONS = Counter("predictions_total", "Total prediction requests served")
+PREDICTIONS = Counter(
+    "predictions_total",
+    "Total prediction requests served"
+)
 
 
 @app.post("/predict")
@@ -70,34 +76,35 @@ def predict(features: Features):
     returns predicted median house value.
     Logs request to file and SQLite, updates Prometheus counter.
     """
-    data = np.array([[
-        features.MedInc,
-        features.HouseAge,
-        features.AveRooms,
-        features.AveBedrms,
-        features.Population,
-        features.AveOccup,
-        features.Latitude,
-        features.Longitude
-    ]])
+    data = np.array(
+        [[
+            features.MedInc,
+            features.HouseAge,
+            features.AveRooms,
+            features.AveBedrms,
+            features.Population,
+            features.AveOccup,
+            features.Latitude,
+            features.Longitude
+        ]]
+    )
     prediction = float(model.predict(data)[0])
 
     # File logging
     logging.info(
-        "Request: {} | Prediction: {}".format(
-            features.dict(), prediction
-        )
+        "Request: %s | Prediction: %s",
+        features.dict(),
+        prediction
     )
 
     # SQLite logging
     c.execute(
-        '''
-        INSERT INTO requests (
-            MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup,
-            Latitude, Longitude, Prediction
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''',
+        (
+            "INSERT INTO requests ("
+            "MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup,"
+            "Latitude, Longitude, Prediction"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ),
         (
             features.MedInc,
             features.HouseAge,
