@@ -4,7 +4,6 @@ import joblib
 import numpy as np
 import logging
 import sqlite3
-import os
 from prometheus_client import Counter, generate_latest
 
 # ----- Load paths from environment -----
@@ -17,6 +16,7 @@ model = joblib.load("models/best_model.pkl")
 # ----- API and Schema Setup -----
 app = FastAPI()
 
+
 class Features(BaseModel):
     MedInc: float
     HouseAge: float
@@ -27,15 +27,18 @@ class Features(BaseModel):
     Latitude: float
     Longitude: float
 
+
 # ----- File Logging Setup -----
 logging.basicConfig(
-    filename=log_path,
+    filename="api.log",
     level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s"
+    format=(
+        "%(asctime)s %(levelname)s %(message)s"
+    )
 )
 
 # ----- SQLite Logging Setup -----
-conn = sqlite3.connect(db_path, check_same_thread=False)
+conn = sqlite3.connect("api_requests.db", check_same_thread=False)
 c = conn.cursor()
 c.execute(
     '''
@@ -59,6 +62,7 @@ conn.commit()
 # ----- Prometheus Metric Setup -----
 PREDICTIONS = Counter("predictions_total", "Total prediction requests served")
 
+
 @app.post("/predict")
 def predict(features: Features):
     """
@@ -66,13 +70,24 @@ def predict(features: Features):
     returns predicted median house value.
     Logs request to file and SQLite, updates Prometheus counter.
     """
-    data = np.array([[features.MedInc, features.HouseAge, features.AveRooms,
-                      features.AveBedrms, features.Population,
-                      features.AveOccup, features.Latitude, features.Longitude]])
+    data = np.array([[
+        features.MedInc,
+        features.HouseAge,
+        features.AveRooms,
+        features.AveBedrms,
+        features.Population,
+        features.AveOccup,
+        features.Latitude,
+        features.Longitude
+    ]])
     prediction = float(model.predict(data)[0])
 
     # File logging
-    logging.info("Request: %s | Prediction: %s", features.dict(), prediction)
+    logging.info(
+        "Request: {} | Prediction: {}".format(
+            features.dict(), prediction
+        )
+    )
 
     # SQLite logging
     c.execute(
@@ -102,12 +117,14 @@ def predict(features: Features):
 
     return {"prediction": prediction}
 
+
 @app.get("/metrics")
 def metrics():
     """
     Exposes Prometheus metrics for monitoring.
     """
     return Response(generate_latest(), media_type="text/plain")
+
 
 @app.post("/retrain")
 def retrain():
