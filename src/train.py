@@ -17,7 +17,6 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 mlflow.set_experiment("California-Housing-Regression")
-
 results = []
 
 # ----- Linear Regression -----
@@ -67,8 +66,7 @@ with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
     )
 
 # ----- Select Best Model -----
-# Choose best based on lowest MSE (or you can use highest R2)
-best = min(results, key=lambda x: x[2])  # (name, model, mse, r2)
+best = min(results, key=lambda x: x[2])  # Choose best by lowest MSE
 best_model_name, best_model, best_mse, best_r2 = best
 
 joblib.dump(best_model, "models/best_model.pkl")

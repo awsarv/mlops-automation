@@ -7,15 +7,12 @@ import sqlite3
 import os
 from prometheus_client import Counter, generate_latest
 
-
 # ----- Load paths from environment -----
 log_path = os.getenv("LOG_PATH", "/app/logs/api.log")
 db_path = os.getenv("DB_PATH", "/app/logs/api_requests.db")
 
-
 # ----- Model Loading -----
 model = joblib.load("models/best_model.pkl")
-
 
 # ----- API and Schema Setup -----
 app = FastAPI()
@@ -39,7 +36,6 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s"
 )
 
-
 # ----- SQLite Logging Setup -----
 conn = sqlite3.connect(db_path, check_same_thread=False)
 c = conn.cursor()
@@ -60,7 +56,6 @@ c.execute(
     )
 )
 conn.commit()
-
 
 # ----- Prometheus Metric Setup -----
 PREDICTIONS = Counter(
