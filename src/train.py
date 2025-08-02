@@ -36,7 +36,6 @@ with mlflow.start_run(run_name="LinearRegression") as run:
     mlflow.log_metric("r2", r2)
     mlflow.log_metric("avg_inference_time", avg_inference_time)
     mlflow.sklearn.log_model(model, "model")
-    # Save result for best model selection
     results.append(("LinearRegression", model, mse, r2))
     print(
         f"Linear Regression: MSE={mse:.4f}, R2={r2:.4f}, "
@@ -73,10 +72,16 @@ best = min(results, key=lambda x: x[2])  # (name, model, mse, r2)
 best_model_name, best_model, best_mse, best_r2 = best
 
 joblib.dump(best_model, "models/best_model.pkl")
-print(f"✅ Best model: {best_model_name} (MSE={best_mse:.4f}, R2={best_r2:.4f}) saved for deployment.")
+print(
+    f"✅ Best model: {best_model_name} "
+    f"(MSE={best_mse:.4f}, R2={best_r2:.4f}) "
+    "saved for deployment."
+)
 
 # ----- Register best model in MLflow Model Registry (Bonus) -----
-with mlflow.start_run(run_name=f"{best_model_name}-Best-Register"):
+with mlflow.start_run(
+    run_name=f"{best_model_name}-Best-Register"
+):
     mlflow.sklearn.log_model(
         best_model,
         "model",
@@ -85,5 +90,6 @@ with mlflow.start_run(run_name=f"{best_model_name}-Best-Register"):
 
 print(
     "Training complete! "
-    "Check MLflow UI on http://<your-ec2-ip>:5000 to compare model performance."
+    "Check MLflow UI on http://<your-ec2-ip>:5000 "
+    "to compare model performance."
 )
