@@ -20,6 +20,30 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Check and start EC2 instance if stopped
+        run: |
+          INSTANCE_ID="${{ secrets.EC2_INSTANCE_ID }}"
+          INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query 'Reservations[0].Instances[0].State.Name' --output text)
+          
+          if [ "$INSTANCE_STATE" = "stopped" ]; then
+            echo "EC2 instance is stopped. Starting it..."
+            aws ec2 start-instances --instance-ids $INSTANCE_ID
+            echo "Waiting for instance to be running..."
+            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+            echo "Instance is now running!"
+          elif [ "$INSTANCE_STATE" = "running" ]; then
+            echo "EC2 instance is already running"
+          else
+            echo "Instance state: $INSTANCE_STATE"
+          fi
+
       - name: Install dependencies
         run: pip install -r requirements.txt
 
