@@ -75,6 +75,9 @@ logs/
 api.log
 api_requests.db
 
+# MLflow experiment tracking
+mlruns/
+
 # Environment files (never commit secrets!)
 .env
 .env.*

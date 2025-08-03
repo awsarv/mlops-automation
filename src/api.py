@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Body
 from pydantic import BaseModel
 import joblib
 import numpy as np
@@ -6,6 +6,8 @@ import logging
 import sqlite3
 import os
 from prometheus_client import Counter, generate_latest
+
+os.makedirs("/app/logs", exist_ok=True)
 
 # ----- Load paths from environment -----
 log_path = os.getenv("LOG_PATH", "/app/logs/api.log")
@@ -64,8 +66,21 @@ PREDICTIONS = Counter(
 )
 
 
-@app.post("/predict")
-def predict(features: Features):
+@app.post(
+    "/predict",
+    response_model=dict,
+    responses={
+        200: {
+            "description": "Successful Prediction",
+            "content": {
+                "application/json": {
+                    "example": {"prediction": 4.778788739495791}
+                }
+            },
+        }
+    },
+)
+def predict(features: Features = Body(...)):
     """
     Receives JSON with California Housing features,
     returns predicted median house value.

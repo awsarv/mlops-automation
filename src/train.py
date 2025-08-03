@@ -37,7 +37,7 @@ with mlflow.start_run(run_name="LinearRegression") as run:
     mlflow.sklearn.log_model(model, "model")
     results.append(("LinearRegression", model, mse, r2))
     print(
-        f"Linear Regression: MSE={mse:.4f}, R2={r2:.4f}, "
+        f"Linear Regression: MSE={(mse * 100):.2f}%, R2={(r2 * 100):.2f}%, "
         f"Avg inference time={avg_inference_time:.6f}s"
     )
 
@@ -61,7 +61,7 @@ with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
     mlflow.sklearn.log_model(model, "model")
     results.append(("DecisionTreeRegressor", model, mse, r2))
     print(
-        f"Decision Tree: MSE={mse:.4f}, R2={r2:.4f}, "
+        f"Decision Tree: MSE={(mse * 100):.2f}%, R2={(r2 * 100):.2f}%, "
         f"Avg inference time={avg_inference_time:.6f}s"
     )
 
@@ -72,7 +72,7 @@ best_model_name, best_model, best_mse, best_r2 = best
 joblib.dump(best_model, "models/best_model.pkl")
 print(
     f"✅ Best model: {best_model_name} "
-    f"(MSE={best_mse:.4f}, R2={best_r2:.4f}) "
+    f"(MSE={(best_mse * 100):.2f}%, R2={(best_r2 * 100):.2f}%) "
     "saved for deployment."
 )
 
