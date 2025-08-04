@@ -16,7 +16,9 @@ df = pd.read_csv("data/california_housing.csv")
 X = df.drop("MedHouseVal", axis=1)
 y = df["MedHouseVal"]
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+    X, y,
+    test_size=0.2,
+    random_state=42
 )
 
 mlflow.set_experiment("California-Housing-Regression")
@@ -74,7 +76,7 @@ best_model_name, best_model, best_mse, best_r2 = best
 
 joblib.dump(best_model, "models/best_model.pkl")
 print(
-    f"✅ Best model: {best_model_name} "
+    f"Best model: {best_model_name} "
     f"(MSE={best_mse:.4f}, R2={best_r2:.4f}) "
     "saved for deployment."
 )
