@@ -12,9 +12,12 @@ from prometheus_client import Counter, generate_latest
 # ----- Load paths from environment -----
 log_path = os.getenv("LOG_PATH", "/app/logs/api.log")
 db_path = os.getenv("DB_PATH", "/app/logs/api_requests.db")
+model_path = os.getenv("MODEL_PATH", "/app/models/best_model.pkl")
 
 # ----- Model Loading -----
-model = joblib.load("models/best_model.pkl")
+model = joblib.load(model_path)
+# ... rest of your code unchanged ...
+
 
 # ----- API and Schema Setup -----
 app = FastAPI()

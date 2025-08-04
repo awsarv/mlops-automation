@@ -8,10 +8,13 @@ services:
       - "8000:8000"
     volumes:
       - ./logs:/app/logs
-      - ./data:/app/data 
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./mlruns:/mlflow/mlruns
     environment:
       - LOG_PATH=/app/logs/api.log
       - DB_PATH=/app/logs/api_requests.db
+      - MLFLOW_TRACKING_URI=file:/mlflow/mlruns
 
   prometheus:
     image: prom/prometheus
@@ -43,8 +46,11 @@ services:
     volumes:
       - ./mlflow.db:/mlflow.db
       - ./models:/models
+      - ./mlruns:/mlflow/mlruns
     working_dir: /mlflow
-    command: mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5000
+    command: mlflow ui --backend-store-uri sqlite:///mlflow.db --default-artifact-root file:/mlflow/mlruns --host 0.0.0.0 --port 5000
+    environment:
+      - MLFLOW_TRACKING_URI=file:/mlflow/mlruns
 
 volumes:
   grafana-data:
