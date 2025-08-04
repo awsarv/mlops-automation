@@ -153,5 +153,3 @@ def retrain():
 
     logging.info("Retraining completed and model updated in memory.")
     return {"status": "Retraining completed and model updated!"}
-
-
