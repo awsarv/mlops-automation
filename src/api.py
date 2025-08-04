@@ -1,13 +1,13 @@
-from fastapi import FastAPI, Response
-from pydantic import BaseModel
+import logging
+import os
+import sqlite3
 import joblib
 import numpy as np
-import logging
-import sqlite3
-import os
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+from fastapi import FastAPI, Response
+from pydantic import BaseModel
 from prometheus_client import Counter, generate_latest
+from sklearn.linear_model import LinearRegression
 
 # ----- Load paths from environment -----
 log_path = os.getenv("LOG_PATH", "/app/logs/api.log")
@@ -16,8 +16,6 @@ model_path = os.getenv("MODEL_PATH", "/app/models/best_model.pkl")
 
 # ----- Model Loading -----
 model = joblib.load(model_path)
-# ... rest of your code unchanged ...
-
 
 # ----- API and Schema Setup -----
 app = FastAPI()
@@ -45,20 +43,18 @@ logging.basicConfig(
 conn = sqlite3.connect(db_path, check_same_thread=False)
 c = conn.cursor()
 c.execute(
-    (
-        "CREATE TABLE IF NOT EXISTS requests ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "MedInc REAL,"
-        "HouseAge REAL,"
-        "AveRooms REAL,"
-        "AveBedrms REAL,"
-        "Population REAL,"
-        "AveOccup REAL,"
-        "Latitude REAL,"
-        "Longitude REAL,"
-        "Prediction REAL,"
-        "Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
-    )
+    "CREATE TABLE IF NOT EXISTS requests ("
+    "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+    "MedInc REAL,"
+    "HouseAge REAL,"
+    "AveRooms REAL,"
+    "AveBedrms REAL,"
+    "Population REAL,"
+    "AveOccup REAL,"
+    "Latitude REAL,"
+    "Longitude REAL,"
+    "Prediction REAL,"
+    "Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
 )
 conn.commit()
 
@@ -99,12 +95,10 @@ def predict(features: Features):
 
     # SQLite logging
     c.execute(
-        (
-            "INSERT INTO requests ("
-            "MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup,"
-            "Latitude, Longitude, Prediction"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        ),
+        "INSERT INTO requests ("
+        "MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup,"
+        "Latitude, Longitude, Prediction"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             features.MedInc,
             features.HouseAge,
