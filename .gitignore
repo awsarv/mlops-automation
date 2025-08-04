@@ -99,3 +99,4 @@ Thumbs.db
 # Ignore files copied/uploaded by mistake
 *.bak
 *~
+!data/california_housing.csv.dvc
