@@ -66,8 +66,7 @@ def log_system_metrics():
 
     mlflow.log_metric("system_cpu_percent", cpu_percent)
     mlflow.log_metric("system_memory_percent", memory.percent)
-    mlflow.log_metric("system_memory_available_gb",
-                      memory.available / (1024**3))
+    mlflow.log_metric("system_memory_available_gb", memory.available / (1024**3))
 
     return {
         "cpu_percent": cpu_percent,
@@ -103,15 +102,11 @@ def create_learning_curve_plot(model, X_train, y_train, cv_folds, model_name):
     val_scores_std = val_scores.std(axis=1)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(train_sizes, train_scores_mean, 'o-',
-             color='blue', label='Training MSE')
-    plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
-                     train_scores_mean + train_scores_std, alpha=0.1, color='blue')
+    plt.plot(train_sizes, train_scores_mean, 'o-', color='blue', label='Training MSE')
+    plt.fill_between(train_sizes, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1, color='blue')
 
-    plt.plot(train_sizes, val_scores_mean, 'o-',
-             color='red', label='Validation MSE')
-    plt.fill_between(train_sizes, val_scores_mean - val_scores_std,
-                     val_scores_mean + val_scores_std, alpha=0.1, color='red')
+    plt.plot(train_sizes, val_scores_mean, 'o-', color='red', label='Validation MSE')
+    plt.fill_between(train_sizes, val_scores_mean - val_scores_std, val_scores_mean + val_scores_std, alpha=0.1, color='red')
 
     plt.xlabel('Training Set Size')
     plt.ylabel('Mean Squared Error')
@@ -132,10 +127,9 @@ def create_learning_curve_plot(model, X_train, y_train, cv_folds, model_name):
 
     # Log learning curve metrics
     for i, size in enumerate(train_sizes):
-        mlflow.log_metric(f"learning_curve_train_mse",
-                          train_scores_mean[i], step=int(size))
-        mlflow.log_metric(f"learning_curve_val_mse",
-                          val_scores_mean[i], step=int(size))
+        mlflow.log_metric(f"learning_curve_train_mse", train_scores_mean[i], step=int(size))
+        mlflow.log_metric(f"learning_curve_val_mse", val_scores_mean[i], step=int(size))
+
 
 
 def create_residual_plot(y_true, y_pred, model_name):
@@ -216,22 +210,16 @@ def create_advanced_model_analysis(X_train, y_train, X_test, y_test, model_name)
 
             # Log validation curve metrics
             for i, depth in enumerate(param_range):
-                mlflow.log_metric("validation_train_mse",
-                                  train_scores_mean[i], step=depth)
-                mlflow.log_metric("validation_val_mse",
-                                  val_scores_mean[i], step=depth)
+                mlflow.log_metric("validation_train_mse", train_scores_mean[i], step=depth)
+                mlflow.log_metric("validation_val_mse", val_scores_mean[i], step=depth)
 
             # Plot validation curve
             plt.figure(figsize=(12, 8))
-            plt.plot(param_range, train_scores_mean, 'o-',
-                     color='blue', label='Training MSE')
-            plt.fill_between(param_range, train_scores_mean - train_scores_std,
-                             train_scores_mean + train_scores_std, alpha=0.1, color='blue')
+            plt.plot(param_range, train_scores_mean, 'o-', color='blue', label='Training MSE')
+            plt.fill_between(param_range, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1, color='blue')
 
-            plt.plot(param_range, val_scores_mean, 'o-',
-                     color='red', label='Validation MSE')
-            plt.fill_between(param_range, val_scores_mean - val_scores_std,
-                             val_scores_mean + val_scores_std, alpha=0.1, color='red')
+            plt.plot(param_range, val_scores_mean, 'o-', color='red', label='Validation MSE')
+            plt.fill_between(param_range, val_scores_mean - val_scores_std, val_scores_mean + val_scores_std, alpha=0.1, color='red')
 
             plt.xlabel('Max Depth')
             plt.ylabel('Mean Squared Error')
@@ -268,8 +256,7 @@ def create_advanced_model_analysis(X_train, y_train, X_test, y_test, model_name)
         # Actual vs Predicted scatter
         plt.subplot(1, 3, 2)
         plt.scatter(y_test, y_pred_dist, alpha=0.6, color='green')
-        plt.plot([y_test.min(), y_test.max()], [
-                 y_test.min(), y_test.max()], 'r--', lw=2)
+        plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
         plt.xlabel('Actual Values')
         plt.ylabel('Predicted Values')
         plt.title(f'Actual vs Predicted - {model_name}')
@@ -278,8 +265,7 @@ def create_advanced_model_analysis(X_train, y_train, X_test, y_test, model_name)
         # Residuals distribution
         plt.subplot(1, 3, 3)
         residuals_dist = y_test - y_pred_dist
-        plt.hist(residuals_dist, bins=30, alpha=0.7,
-                 color='red', edgecolor='black')
+        plt.hist(residuals_dist, bins=30, alpha=0.7, color='red', edgecolor='black')
         plt.xlabel('Residuals')
         plt.ylabel('Frequency')
         plt.title(f'Residuals Distribution - {model_name}')
@@ -297,10 +283,8 @@ def create_advanced_model_analysis(X_train, y_train, X_test, y_test, model_name)
         plt.close()
 
         # Log advanced metrics
-        mlflow.log_metric("correlation_max",
-                          correlation_matrix.abs().max().max())
-        mlflow.log_metric("correlation_mean",
-                          correlation_matrix.abs().mean().mean())
+        mlflow.log_metric("correlation_max", correlation_matrix.abs().max().max())
+        mlflow.log_metric("correlation_mean", correlation_matrix.abs().mean().mean())
         mlflow.log_metric("target_skewness", y_train.skew())
         mlflow.log_metric("target_kurtosis", y_train.kurtosis())
         mlflow.log_metric("residuals_mean", residuals_dist.mean())
@@ -569,8 +553,7 @@ for max_depth in args.max_depth_list:
                 X_test.iloc[:5], model.predict(X_test.iloc[:5]))
         )
 
-        mlflow.set_tag("Training Info",
-                       f"Decision Tree Regressor with max_depth={max_depth}")
+        mlflow.set_tag("Training Info", f"Decision Tree Regressor with max_depth={max_depth}")
         mlflow.set_tag("Model Type", "DecisionTreeRegressor")
         mlflow.set_tag("Max Depth", max_depth)
         mlflow.set_tag("Framework", "scikit-learn")

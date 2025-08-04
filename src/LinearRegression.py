@@ -5,16 +5,6 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 
 def run_linear_regression(X_train, y_train, X_test, y_test):
-    """
-    Enhanced Linear Regression with comprehensive evaluation
-    
-    Args:
-        X_train, y_train: Training data
-        X_test, y_test: Test data
-    
-    Returns:
-        model, model_name, mse, r2, avg_inference_time
-    """
     # Create and train model
     model = LinearRegression()
     model.fit(X_train, y_train)

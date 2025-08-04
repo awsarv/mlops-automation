@@ -5,18 +5,6 @@ import numpy as np
 
 
 def run_decision_tree_regression(X_train, y_train, X_test, y_test, max_depth=5, random_state=42):
-    """
-    Enhanced Decision Tree Regression with comprehensive evaluation
-    
-    Args:
-        X_train, y_train: Training data
-        X_test, y_test: Test data
-        max_depth: Maximum depth of the tree
-        random_state: Random state for reproducibility
-    
-    Returns:
-        model, model_name, mse, r2, avg_inference_time
-    """
     # Create model with additional parameters for better performance
     model = DecisionTreeRegressor(
         max_depth=max_depth,
