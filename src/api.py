@@ -5,6 +5,8 @@ import numpy as np
 import logging
 import sqlite3
 import os
+import pandas as pd
+from sklearn.linear_model import LinearRegression
 from prometheus_client import Counter, generate_latest
 
 os.makedirs("/app/logs", exist_ok=True)
@@ -12,9 +14,10 @@ os.makedirs("/app/logs", exist_ok=True)
 # ----- Load paths from environment -----
 log_path = os.getenv("LOG_PATH", "/app/logs/api.log")
 db_path = os.getenv("DB_PATH", "/app/logs/api_requests.db")
+model_path = os.getenv("MODEL_PATH", "/app/models/best_model.pkl")
 
 # ----- Model Loading -----
-model = joblib.load("models/best_model.pkl")
+model = joblib.load(model_path)
 
 # ----- API and Schema Setup -----
 app = FastAPI()
@@ -146,8 +149,23 @@ def metrics():
 @app.post("/retrain")
 def retrain():
     """
-    Demo endpoint for model retraining trigger.
+    Actually retrain the model and reload it for serving.
     """
-    logging.info("Retraining triggered!")
-    return {"status": "Retraining triggered (not implemented fully in demo)"}
-    
+    # Load data
+    df = pd.read_csv("data/california_housing.csv")
+    X = df.drop("MedHouseVal", axis=1)
+    y = df["MedHouseVal"]
+
+    # Retrain model
+    retrained_model = LinearRegression()
+    retrained_model.fit(X, y)
+
+    # Save new model to disk
+    joblib.dump(retrained_model, "models/best_model.pkl")
+
+    # Update in-memory model for API
+    global model
+    model = retrained_model
+
+    logging.info("Retraining completed and model updated in memory.")
+    return {"status": "Retraining completed and model updated!"}

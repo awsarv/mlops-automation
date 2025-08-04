@@ -52,6 +52,17 @@ jobs:
           pip install flake8
           flake8 src/ --max-line-length=150
 
+      - name: Train and log models via Docker (shared volumes)
+        run: |
+          mkdir -p mlruns models data
+          docker run --rm \
+            -v ${{ github.workspace }}/data:/app/data \
+            -v ${{ github.workspace }}/models:/app/models \
+            -v ${{ github.workspace }}/mlruns:/mlflow/mlruns \
+            -e MLFLOW_TRACKING_URI=file:/mlflow/mlruns \
+            mlopsdemo/housing-api:latest \
+            python src/train.py
+
       - name: Build, tag, and push Docker image to Docker Hub
         run: |
           docker build -t mlopsdemo/housing-api:latest .
