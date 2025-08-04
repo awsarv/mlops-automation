@@ -5,7 +5,9 @@ import mlflow.sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import (
+    mean_squared_error, r2_score
+)
 import joblib
 import time
 
@@ -16,9 +18,7 @@ df = pd.read_csv("data/california_housing.csv")
 X = df.drop("MedHouseVal", axis=1)
 y = df["MedHouseVal"]
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=42
+    X, y, test_size=0.2, random_state=42
 )
 
 mlflow.set_experiment("California-Housing-Regression")
