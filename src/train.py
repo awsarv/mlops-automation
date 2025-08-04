@@ -12,7 +12,10 @@ import joblib
 import time
 
 # Use env var for MLflow URI, default to ./mlruns for local, /mlflow/mlruns for docker
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "file:mlruns"))
+mlflow.set_tracking_uri(
+    os.getenv("MLFLOW_TRACKING_URI", "file:mlruns")
+)
+
 
 df = pd.read_csv("data/california_housing.csv")
 X = df.drop("MedHouseVal", axis=1)
