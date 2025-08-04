@@ -62,7 +62,6 @@ def log_system_metrics():
     # CPU and memory usage
     cpu_percent = psutil.cpu_percent(interval=1)
     memory = psutil.virtual_memory()
-    disk = psutil.disk_usage('/')
 
     mlflow.log_metric("system_cpu_percent", cpu_percent)
     mlflow.log_metric("system_memory_percent", memory.percent)
