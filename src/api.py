@@ -131,7 +131,29 @@ def metrics():
 @app.post("/retrain")
 def retrain():
     """
-    Demo endpoint for model retraining trigger.
+    Actually retrain the model and reload it for serving.
     """
-    logging.info("Retraining triggered!")
-    return {"status": "Retraining triggered (not implemented fully in demo)"}
+    import pandas as pd
+    from sklearn.linear_model import LinearRegression
+    import joblib
+    import os
+
+    # Load data
+    df = pd.read_csv("data/california_housing.csv")
+    X = df.drop("MedHouseVal", axis=1)
+    y = df["MedHouseVal"]
+
+    # Retrain model (you can add other models/selection logic if you want)
+    retrained_model = LinearRegression()
+    retrained_model.fit(X, y)
+
+    # Save new model to disk
+    joblib.dump(retrained_model, "models/best_model.pkl")
+
+    # Update in-memory model for API
+    global model
+    model = retrained_model
+
+    logging.info("Retraining completed and model updated in memory.")
+    return {"status": "Retraining completed and model updated!"}
+
