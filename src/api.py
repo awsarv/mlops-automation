@@ -5,6 +5,8 @@ import numpy as np
 import logging
 import sqlite3
 import os
+import pandas as pd
+from sklearn.linear_model import LinearRegression
 from prometheus_client import Counter, generate_latest
 
 # ----- Load paths from environment -----
@@ -133,17 +135,12 @@ def retrain():
     """
     Actually retrain the model and reload it for serving.
     """
-    import pandas as pd
-    from sklearn.linear_model import LinearRegression
-    import joblib
-    import os
-
     # Load data
     df = pd.read_csv("data/california_housing.csv")
     X = df.drop("MedHouseVal", axis=1)
     y = df["MedHouseVal"]
 
-    # Retrain model (you can add other models/selection logic if you want)
+    # Retrain model
     retrained_model = LinearRegression()
     retrained_model.fit(X, y)
 
@@ -156,4 +153,5 @@ def retrain():
 
     logging.info("Retraining completed and model updated in memory.")
     return {"status": "Retraining completed and model updated!"}
+
 
