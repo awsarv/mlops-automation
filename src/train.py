@@ -46,6 +46,7 @@ with mlflow.start_run(run_name="LinearRegression") as run:
         f"Linear Regression: MSE={mse:.4f}, R2={r2:.4f}, "
         f"Avg inference time={avg_inference_time:.6f}s"
     )
+    mlflow.log_artifact('LinearRegression.joblib')
 
 # ----- Decision Tree -----
 max_depth = 5  # You can tune this for more runs
@@ -70,7 +71,8 @@ with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
         f"Decision Tree: MSE={mse:.4f}, R2={r2:.4f}, "
         f"Avg inference time={avg_inference_time:.6f}s"
     )
-
+    mlflow.log_artifact('DecisionTreeRegressor.joblib')
+    
 # ----- Select Best Model -----
 best = min(results, key=lambda x: x[2])  # Choose best by lowest MSE
 best_model_name, best_model, best_mse, best_r2 = best

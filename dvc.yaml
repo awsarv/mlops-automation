@@ -1,0 +1,8 @@
+stages:
+  train_model:
+    cmd: python data_prep.py && python train.py
+    deps:
+      - data/california_housing.csv
+      - train.py
+    outs:
+      - models/best_model.pkl
