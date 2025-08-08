@@ -28,9 +28,6 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: dvc pull --force
-
-      - name: Reproduce pipeline with DVC
-        run: dvc repro --force
   
       - name: Lint code
         run: |
