@@ -30,7 +30,7 @@ jobs:
         run: dvc pull
 
       - name: Reproduce pipeline with DVC
-        run: dvc repro
+        run: dvc repro --force
   
       - name: Lint code
         run: |
