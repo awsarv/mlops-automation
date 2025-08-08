@@ -22,15 +22,13 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-        
-      - name: Install DVC
-        run: pip install dvc
 
       - name: Pull DVC data (if using DVC remote)
         run: dvc pull
 
       - name: Reproduce pipeline with DVC
         run: dvc repro
+  
       - name: Lint code
         run: |
           pip install flake8

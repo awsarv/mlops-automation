@@ -6,4 +6,5 @@ fastapi
 uvicorn
 pydantic
 prometheus-client
-
+dvc-s3
+dvc
