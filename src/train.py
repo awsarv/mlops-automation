@@ -72,7 +72,7 @@ with mlflow.start_run(run_name="DecisionTreeRegressor") as run:
         f"Avg inference time={avg_inference_time:.6f}s"
     )
     mlflow.log_artifact('DecisionTreeRegressor.joblib')
-    
+
 # ----- Select Best Model -----
 best = min(results, key=lambda x: x[2])  # Choose best by lowest MSE
 best_model_name, best_model, best_mse, best_r2 = best
