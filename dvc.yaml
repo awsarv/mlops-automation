@@ -1,0 +1,7 @@
+stages:
+  prepare:
+    cmd: python src/data_prep.py
+    deps:
+      - src/data_prep.py
+    outs:
+      - data/california_housing.csv

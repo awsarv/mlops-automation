@@ -1,21 +1,27 @@
 # Use a minimal Python image
 FROM python:3.10-slim
 
-# Set the working directory in the container
+# Install SQLite CLI (handy for debugging in container; optional)
+RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
 WORKDIR /app
 
-# Copy only requirements first for efficient Docker caching
+# Copy only requirements first (better caching)
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install deps
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code and model
 COPY src/ ./src/
 COPY models/ ./models/
 
-# Expose port 8000 for Uvicorn
+# Ensure runtime dirs exist
+RUN mkdir -p /app/logs /app/data
+
+# Expose port for Uvicorn
 EXPOSE 8000
 
-# Start the API with Uvicorn
+# Start FastAPI app
 CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]

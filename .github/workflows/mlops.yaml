@@ -2,33 +2,52 @@ name: CI/CD Deploy to EC2 with Monitoring
 
 on:
   push:
-    branches: [mlops]
+    branches: [mlops, arv/update]
   workflow_dispatch:
-  
-
 
 jobs:
-  build-and-deploy:
+  build-train-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Lint code
+      - name: Install base tools
         run: |
-          pip install flake8
-          flake8 src/
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 "dvc[s3]"
 
-      - name: Train and log models via Docker (shared volumes)
+      - name: Lint
+        run: flake8 src/
+
+      # --- DVC PULL from S3 ---
+      - name: Configure AWS creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: DVC pull data
+        run: |
+          dvc version
+          dvc pull
+          ls -lh data/
+
+      # --- Build image FIRST ---
+      - name: Build image
+        run: |
+          docker build -t mlopsdemo/housing-api:${{ github.sha }} -t mlopsdemo/housing-api:latest .
+
+      # --- Train with the just-built image ---
+      - name: Train and log models (shared volumes)
         run: |
           mkdir -p mlruns models data
           docker run --rm \
@@ -36,41 +55,50 @@ jobs:
             -v ${{ github.workspace }}/models:/app/models \
             -v ${{ github.workspace }}/mlruns:/mlflow/mlruns \
             -e MLFLOW_TRACKING_URI=file:/mlflow/mlruns \
-            mlopsdemo/housing-api:latest \
+            mlopsdemo/housing-api:${{ github.sha }} \
             python src/train.py
 
-      - name: Build, tag, and push Docker image to Docker Hub
+      - name: Upload mlruns artifact (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns
+          path: mlruns
+
+      # --- Push images ---
+      - name: Docker Hub login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Push images
         run: |
-          docker build -t mlopsdemo/housing-api:latest .
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
-            docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          docker push mlopsdemo/housing-api:${{ github.sha }}
           docker push mlopsdemo/housing-api:latest
 
-      - name: Create .env for Docker Compose
-        run: |
-          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" > .env
+      # --- Deploy to EC2 ---
+      - name: Prepare .env
+        run: echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" > .env
 
       - name: Save SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > ec2_deploy_key
           chmod 600 ec2_deploy_key
 
-      - name: Copy code and .env to EC2
+      - name: Rsync code to EC2
         run: |
           rsync -az -e "ssh -o StrictHostKeyChecking=no -i ec2_deploy_key" . ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }}:/home/${{ secrets.EC2_SSH_USER }}/mlops-app/
-          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }} "cd mlops-app && ls -al .env"
 
-      - name: Remote deploy on EC2 (docker-compose up)
+      - name: Compose up on EC2
         env:
           EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
           EC2_SSH_USER: ${{ secrets.EC2_SSH_USER }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key $EC2_SSH_USER@$EC2_PUBLIC_IP << EOF
-            cd mlops-app
+          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key $EC2_SSH_USER@$EC2_PUBLIC_IP << 'EOF'
+            set -e
+            cd ~/mlops-app
             docker pull mlopsdemo/housing-api:latest
-            docker-compose down || true
-            docker-compose up -d --remove-orphans
+            docker compose down || true
+            docker compose up -d --remove-orphans
+            docker ps
           EOF
 
-      - name: Cleanup SSH key
+      - name: Cleanup key
         run: rm -f ec2_deploy_key
