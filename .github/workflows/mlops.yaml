@@ -1,4 +1,4 @@
-name: CI/CD Deploy to EC2 with Monitoring
+name: MLOps Automation 
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -22,12 +22,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 "dvc[s3]"
+          pip install "dvc[s3]" flake8
 
       - name: Lint
         run: flake8 src/
 
-      # --- DVC PULL from S3 ---
+      # --- DVC: pull from S3 and materialize files per dvc.lock ---
       - name: Configure AWS creds
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -35,19 +35,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: DVC pull data
+      - name: DVC pull & checkout data
         run: |
-          dvc version
-          dvc pull
+          rm -f data/california_housing.csv || true
+          dvc pull -v
+          dvc checkout -v
           ls -lh data/
 
-      # --- Build image FIRST ---
+      # --- Build image FIRST (used for training + serving) ---
       - name: Build image
         run: |
           docker build -t mlopsdemo/housing-api:${{ github.sha }} -t mlopsdemo/housing-api:latest .
 
-      # --- Train with the just-built image ---
-      - name: Train and log models (shared volumes)
+      # --- Train with the just-built image (local MLflow file store) ---
+      - name: Train and log models
         run: |
           mkdir -p mlruns models data
           docker run --rm \
@@ -64,7 +65,7 @@ jobs:
           name: mlruns
           path: mlruns
 
-      # --- Push images ---
+      # --- Push images to Docker Hub ---
       - name: Docker Hub login
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
