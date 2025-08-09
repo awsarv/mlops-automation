@@ -27,7 +27,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: dvc pull --force
+        run: dvc push
   
       - name: Lint code
         run: |
@@ -80,4 +80,5 @@ jobs:
 
       - name: Cleanup SSH key
         run: rm -f ec2_deploy_key
+
 
