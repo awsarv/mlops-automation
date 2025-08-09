@@ -4,3 +4,4 @@
 /mlruns/
 *.db
 .dvc/config.local
+/data/
