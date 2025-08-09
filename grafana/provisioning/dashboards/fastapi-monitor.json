@@ -1,36 +1,211 @@
 {
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
   "id": null,
-  "uid": "mlops-fastapi",
-  "title": "MLOps FastAPI Monitoring",
-  "timezone": "browser",
+  "links": [],
+  "liveNow": false,
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["mlops", "fastapi", "prometheus"],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "hide": 0,
+        "label": "Datasource",
+        "current": {},
+        "options": []
+      },
+      {
+        "name": "job",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
+        "label": "Job",
+        "includeAll": false,
+        "multi": false,
+        "query": "label_values(up, job)",
+        "current": { "selected": true, "text": "housing-api", "value": "housing-api" },
+        "refresh": 2
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "$datasource" },
+        "label": "Instance",
+        "includeAll": false,
+        "multi": false,
+        "query": "label_values(up{job=\"$job\"}, instance)",
+        "refresh": 2
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] },
+  "title": "MLOps API – Overview",
+  "uid": "mlops-api-overview",
+  "version": 1,
   "panels": [
     {
       "type": "stat",
-      "title": "Total Predictions",
+      "title": "Target Up",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
       "targets": [
-        {
-          "expr": "predictions_total",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
+        { "expr": "avg_over_time(up{job=\"$job\", instance=~\"$instance\"}[5m])", "legendFormat": "up" }
       ],
-      "datasource": "Prometheus",
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "value",
+        "textMode": "auto"
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 0
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "red", "value": 0 }, { "color": "green", "value": 1 }]
+          }
+        }
       }
+    },
+    {
+      "type": "stat",
+      "title": "Predictions (Total)",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        { "expr": "sum(predictions_total{job=\"$job\", instance=~\"$instance\"})", "legendFormat": "total" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "type": "stat",
+      "title": "Error Rate (%)",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "100 * (sum(rate(predictions_total{status=\"error\", job=\"$job\", instance=~\"$instance\"}[5m])) / clamp_min(sum(rate(predictions_total{job=\"$job\", instance=~\"$instance\"}[5m])), 1e-6))",
+          "legendFormat": "error %"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "type": "stat",
+      "title": "Avg Latency (ms, 5m)",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "1000 * (sum(rate(inference_latency_seconds_sum{job=\"$job\", instance=~\"$instance\"}[5m])) / sum(rate(inference_latency_seconds_count{job=\"$job\", instance=~\"$instance\"}[5m])))",
+          "legendFormat": "avg"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests per second (OK vs Error)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(predictions_total{job=\"$job\", instance=~\"$instance\"}[5m]))",
+          "legendFormat": "{{status}} rps"
+        }
+      ],
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency: p50 / p90 / p95 / p99 (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.50, sum by (le) (rate(inference_latency_seconds_bucket{job=\"$job\", instance=~\"$instance\"}[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.90, sum by (le) (rate(inference_latency_seconds_bucket{job=\"$job\", instance=~\"$instance\"}[5m])))",
+          "legendFormat": "p90"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(inference_latency_seconds_bucket{job=\"$job\", instance=~\"$instance\"}[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.99, sum by (le) (rate(inference_latency_seconds_bucket{job=\"$job\", instance=~\"$instance\"}[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Process Memory (RSS) & Virtual",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"$job\", instance=~\"$instance\"}",
+          "legendFormat": "rss"
+        },
+        {
+          "expr": "process_virtual_memory_bytes{job=\"$job\", instance=~\"$instance\"}",
+          "legendFormat": "virtual"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Time (User/System)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total{job=\"$job\", instance=~\"$instance\"}[5m])",
+          "legendFormat": "cpu seconds/s"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Python GC Collections (by generation)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "rate(python_gc_collections_total{job=\"$job\", instance=~\"$instance\", generation=\"0\"}[5m])",
+          "legendFormat": "gen0"
+        },
+        {
+          "expr": "rate(python_gc_collections_total{job=\"$job\", instance=~\"$instance\", generation=\"1\"}[5m])",
+          "legendFormat": "gen1"
+        },
+        {
+          "expr": "rate(python_gc_collections_total{job=\"$job\", instance=~\"$instance\", generation=\"2\"}[5m])",
+          "legendFormat": "gen2"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Predictions Total (cumulative)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "$datasource" },
+      "targets": [
+        {
+          "expr": "sum by (status) (predictions_total{job=\"$job\", instance=~\"$instance\"})",
+          "legendFormat": "{{status}}"
+        }
+      ]
     }
-  ],
-  "schemaVersion": 34,
-  "version": 1,
-  "refresh": "5s"
+  ]
 }

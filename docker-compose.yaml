@@ -30,6 +30,8 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.rules.yml:/etc/prometheus/prometheus.rules.yml
+
 
   grafana:
     image: grafana/grafana:11.1.4
