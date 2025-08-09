@@ -1,10 +1,7 @@
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
-import os
 
-# Pull the latest data from DVC
-os.system("dvc pull data/california_housing.csv")
 df = pd.read_csv('data/california_housing.csv')
 
 # Impute missing values
