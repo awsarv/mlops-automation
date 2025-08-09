@@ -1,8 +1,8 @@
-name: MLOps Automation 
+name: CI/CD Deploy to EC2 with Monitoring
 
 on:
   push:
-    branches: [mlops, arv/update]
+    branches: [ mlops ]
   workflow_dispatch:
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
       - name: Lint
         run: flake8 src/
 
-      # --- DVC: pull from S3 and materialize files per dvc.lock ---
+      # --- DVC: pull from S3 and materialize per dvc.lock ---
       - name: Configure AWS creds
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -47,23 +47,31 @@ jobs:
         run: |
           docker build -t mlopsdemo/housing-api:${{ github.sha }} -t mlopsdemo/housing-api:latest .
 
-      # --- Train with the just-built image (local MLflow file store) ---
-      - name: Train and log models
+      # --- Wait for MLflow tracking server on EC2 ---
+      - name: Wait for MLflow server (EC2:5000)
+        env:
+          MLFLOW_HOST: ${{ secrets.EC2_PUBLIC_IP }}
         run: |
-          mkdir -p mlruns models data
+          for i in {1..30}; do
+            if curl -s "http://${MLFLOW_HOST}:5000/api/2.0/mlflow/experiments/list" >/dev/null; then
+              echo "MLflow is up"; exit 0
+            fi
+            echo "Waiting for MLflow... ($i/30)"; sleep 2
+          done
+          echo "MLflow not reachable"; exit 1
+
+      # --- Train & log to EC2 MLflow server (no local mlruns mount) ---
+      - name: Train and log models to MLflow server
+        env:
+          MLFLOW_TRACKING_URI: http://${{ secrets.EC2_PUBLIC_IP }}:5000
+          GIT_PYTHON_REFRESH: quiet
+        run: |
           docker run --rm \
+            -e MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI}" \
             -v ${{ github.workspace }}/data:/app/data \
             -v ${{ github.workspace }}/models:/app/models \
-            -v ${{ github.workspace }}/mlruns:/mlflow/mlruns \
-            -e MLFLOW_TRACKING_URI=file:/mlflow/mlruns \
             mlopsdemo/housing-api:${{ github.sha }} \
             python src/train.py
-
-      - name: Upload mlruns artifact (optional)
-        uses: actions/upload-artifact@v4
-        with:
-          name: mlruns
-          path: mlruns
 
       # --- Push images to Docker Hub ---
       - name: Docker Hub login
