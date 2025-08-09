@@ -5,6 +5,11 @@ on:
     branches: [ mlops ]
   workflow_dispatch:
 
+# <-- IMPORTANT: allow write access for the push step
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   build-train-push-deploy:
     runs-on: ubuntu-latest
@@ -12,6 +17,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # ensure we’re on the triggering branch with full history
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -86,7 +95,8 @@ jobs:
           grep -qxF '/models/*' .gitignore || echo '/models/*' >> .gitignore
           grep -qxF '!/models/*.dvc' .gitignore || echo '!/models/*.dvc' >> .gitignore
           git add .gitignore
-          git commit -m "ci: ignore raw model binaries; keep .dvc" || true
+          git -c user.name="ci-bot" -c user.email="ci-bot@example.com" \
+            commit -m "ci: ignore raw model binaries; keep .dvc" || true
 
       # --- DVC: untrack raw file if Git-tracked, add pointer if missing, push to S3 ---
       - name: DVC-track deployed model & push
@@ -98,7 +108,8 @@ jobs:
           if git ls-files --error-unmatch models/best_model.pkl >/dev/null 2>&1; then
             echo "Untracking models/best_model.pkl from Git index..."
             git rm --cached models/best_model.pkl
-            git commit -m "ci: stop tracking models/best_model.pkl" || true
+            git -c user.name="ci-bot" -c user.email="ci-bot@example.com" \
+              commit -m "ci: stop tracking models/best_model.pkl" || true
           fi
 
           # Add to DVC only if pointer not present
@@ -114,14 +125,34 @@ jobs:
           git add models/best_model.pkl.dvc
           test -f dvc.lock && git add dvc.lock || true
 
-      # --- Commit the .dvc pointer back to repo ---
-      - name: Commit model pointer (.dvc) back to repo
-        uses: stefanzweifel/git-auto-commit-action@v5
+      # --- Commit/push the .dvc pointer back to the same branch; fallback to PR if push blocked ---
+      - name: Push .dvc pointer (direct)
+        id: push-pointer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -e
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          # Only commit if there are staged changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(dvc): track best_model.pkl in S3 via DVC"
+            git push "https://${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${BRANCH}"
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Open PR with .dvc pointer (fallback)
+        if: failure() && steps.push-pointer.outcome == 'failure'
+        uses: peter-evans/create-pull-request@v6
         with:
-          commit_message: "chore(dvc): track best_model.pkl in S3 via DVC"
-          commit_user_name: ci-bot
-          commit_user_email: ci-bot@example.com
-          push_options: --force-with-lease
+          token: ${{ github.token }}
+          commit-message: "chore(dvc): track best_model.pkl in S3 via DVC"
+          title: "chore(dvc): track best_model.pkl pointer"
+          body: "CI couldn’t push to `${{ github.ref_name }}` (protection/permissions). This PR contains the DVC pointer update."
+          branch: "ci/dvc-pointer-${{ github.run_id }}"
+          base: ${{ github.ref_name }}
 
       # --- Push images to Docker Hub ---
       - name: Docker Hub login
