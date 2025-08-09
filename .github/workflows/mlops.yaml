@@ -2,7 +2,7 @@ name: CI/CD Deploy to EC2 with Monitoring
 
 on:
   push:
-    branches: [mlops]
+    branches: [mlops, mlops-part2]
   workflow_dispatch:
   
 
@@ -50,26 +50,64 @@ jobs:
         run: |
           echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" > .env
 
+      - name: Debug - Check all secrets variables
+        run: |
+          echo "=== CHECKING ALL SECRETS VARIABLES ==="
+          echo "EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}"
+          echo "EC2_SSH_USER: ${{ secrets.EC2_SSH_USER }}"
+          echo "DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}"
+          echo "GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
+          echo ""
+          echo "=== CHECKING SSH KEY (first 50 characters) ==="
+          echo "${{ secrets.EC2_SSH_KEY }}" | head -c 50
+          echo "..."
+          echo ""
+          echo "=== CHECKING SSH KEY (last 50 characters) ==="
+          echo "${{ secrets.EC2_SSH_KEY }}" | tail -c 50
+          echo ""
+          echo "=== CHECKING DOCKERHUB TOKEN (first 20 characters) ==="
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | head -c 20
+          echo "..."
+          echo ""
+          echo "=== VERIFICATION COMPLETE ==="
+
       - name: Save SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > ec2_deploy_key
           chmod 600 ec2_deploy_key
 
+      - name: Test SSH connection to EC2
+        run: |
+          echo "Testing SSH connection to EC2..."
+          echo "Target: ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }}"
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ec2_deploy_key ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }} "echo 'SSH connection successful! EC2 is reachable.'"
+
       - name: Copy code and .env to EC2
         run: |
-          rsync -az -e "ssh -o StrictHostKeyChecking=no -i ec2_deploy_key" . ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }}:/home/${{ secrets.EC2_SSH_USER }}/mlops-app/
-          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }} "cd mlops-app && ls -al .env"
+          echo "Creating mlops-app directory on EC2 if it doesn't exist..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ec2_deploy_key ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }} "mkdir -p mlops-app"
+          
+          echo "Syncing files to EC2 (this may take a few minutes)..."
+          rsync -avz --timeout=300 --progress -e "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ec2_deploy_key" . ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }}:/home/${{ secrets.EC2_SSH_USER }}/mlops-app/
+          
+          echo "Verifying .env file exists on EC2..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ec2_deploy_key ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }} "cd mlops-app && ls -al .env"
 
       - name: Remote deploy on EC2 (docker-compose up)
         env:
           EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
           EC2_SSH_USER: ${{ secrets.EC2_SSH_USER }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key $EC2_SSH_USER@$EC2_PUBLIC_IP << EOF
+          echo "Deploying to EC2 using Docker Compose..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ec2_deploy_key $EC2_SSH_USER@$EC2_PUBLIC_IP << 'EOF'
             cd mlops-app
+            echo "Pulling latest Docker image..."
             docker pull mlopsdemo/housing-api:latest
+            echo "Stopping existing containers..."
             docker-compose down || true
+            echo "Starting new containers..."
             docker-compose up -d --remove-orphans
+            echo "Deployment completed!"
           EOF
 
       - name: Cleanup SSH key

@@ -6,4 +6,7 @@ fastapi
 uvicorn
 pydantic
 prometheus-client
-
+matplotlib
+seaborn
+psutil
+numpy
