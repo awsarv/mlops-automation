@@ -4,5 +4,3 @@ stages:
     deps:
       - data/california_housing.csv
       - train.py
-    outs:
-      - models/best_model.pkl
