@@ -1,0 +1,10 @@
+artifact_location: file:///home/arv/study/repo/mlops-automation/mlruns/115105151344673564/models/m-7151af3e30ef40cf8c4309a9c9e62ca8/artifacts
+creation_timestamp: 1753633387308
+experiment_id: '115105151344673564'
+last_updated_timestamp: 1753633389186
+model_id: m-7151af3e30ef40cf8c4309a9c9e62ca8
+model_type: null
+name: model
+source_run_id: b83b5a869a4b4f77b78c73f4c29dcc1a
+status: 2
+status_message: null

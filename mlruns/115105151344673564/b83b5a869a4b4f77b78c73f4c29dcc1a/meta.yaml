@@ -1,0 +1,14 @@
+artifact_uri: file:///home/arv/study/repo/mlops-automation/mlruns/115105151344673564/b83b5a869a4b4f77b78c73f4c29dcc1a/artifacts
+end_time: 1753633389188
+entry_point_name: ''
+experiment_id: '115105151344673564'
+lifecycle_stage: active
+run_id: b83b5a869a4b4f77b78c73f4c29dcc1a
+run_name: DecisionTreeRegressor
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1753633387099
+status: 3
+tags: []
+user_id: arv
