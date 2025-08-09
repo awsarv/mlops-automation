@@ -2,3 +2,4 @@
     remote = myremote
 ['remote "myremote"']
     url = s3://mlops-grp13/
+    region = ap-south-1
