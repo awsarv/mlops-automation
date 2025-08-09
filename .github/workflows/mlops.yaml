@@ -61,7 +61,7 @@ jobs:
           done
           echo "MLflow not reachable"; exit 1
 
-      # --- Train & log to EC2 MLflow server (no local mlruns mount) ---
+      # --- Train & log to EC2 MLflow server ---
       - name: Train and log models to MLflow server
         env:
           MLFLOW_TRACKING_URI: http://${{ secrets.EC2_PUBLIC_IP }}:5000
@@ -74,20 +74,47 @@ jobs:
             mlopsdemo/housing-api:${{ github.sha }} \
             python src/train.py
 
-      # --- DVC: Track the deployed model and push to S3 ---
+      # --- DVC: ensure remote points to S3 prefix ---
       - name: Ensure DVC remote points to S3 prefix
         run: |
           dvc remote list || dvc remote add -d myremote s3://mlops-grp13/mlops-app
           dvc remote modify myremote url s3://mlops-grp13/mlops-app
 
+      # --- Make sure raw model binaries are ignored; keep .dvc pointers tracked ---
+      - name: Ensure .gitignore rules for models
+        run: |
+          grep -qxF '/models/*' .gitignore || echo '/models/*' >> .gitignore
+          grep -qxF '!/models/*.dvc' .gitignore || echo '!/models/*.dvc' >> .gitignore
+          git add .gitignore
+          git commit -m "ci: ignore raw model binaries; keep .dvc" || true
+
+      # --- DVC: untrack raw file if Git-tracked, add pointer if missing, push to S3 ---
       - name: DVC-track deployed model & push
         run: |
+          set -e
           test -f models/best_model.pkl || (echo "models/best_model.pkl missing" && ls -la models/ && exit 1)
-          dvc add models/best_model.pkl
+
+          # If the raw model is tracked by Git, untrack it
+          if git ls-files --error-unmatch models/best_model.pkl >/dev/null 2>&1; then
+            echo "Untracking models/best_model.pkl from Git index..."
+            git rm --cached models/best_model.pkl
+            git commit -m "ci: stop tracking models/best_model.pkl" || true
+          fi
+
+          # Add to DVC only if pointer not present
+          if [ ! -f models/best_model.pkl.dvc ]; then
+            echo "DVC-adding models/best_model.pkl..."
+            dvc add models/best_model.pkl
+          else
+            echo "Pointer exists; skipping dvc add."
+          fi
+
+          # Push to remote and stage pointer/lock
           dvc push -v
           git add models/best_model.pkl.dvc
           test -f dvc.lock && git add dvc.lock || true
 
+      # --- Commit the .dvc pointer back to repo ---
       - name: Commit model pointer (.dvc) back to repo
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
