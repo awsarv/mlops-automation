@@ -1,7 +1,10 @@
 /data/
-/logs/
-/mlflow_store/
-/mlruns/
-*.db
-.dvc/config.local
-/data/
+ /logs/
+ /mlflow_store/
+ /mlruns/
+ *.db
+ .dvc/config.local
+
+# models: ignore binaries, keep .dvc pointer
+/models/*
+!/models/*.dvc

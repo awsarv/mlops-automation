@@ -28,7 +28,7 @@ jobs:
         run: flake8 src/
 
       # --- DVC: pull from S3 and materialize per dvc.lock ---
-      - name: Configure AWS creds
+      - name: Configure AWS creds (for DVC S3)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -40,20 +40,21 @@ jobs:
           rm -f data/california_housing.csv || true
           dvc pull -v
           dvc checkout -v
-          ls -lh data/
+          ls -lh data/ || true
 
       # --- Build image FIRST (used for training + serving) ---
       - name: Build image
         run: |
           docker build -t mlopsdemo/housing-api:${{ github.sha }} -t mlopsdemo/housing-api:latest .
 
-      # --- Wait for MLflow tracking server on EC2 ---
+      # --- Wait for MLflow tracking server on EC2 (use POST /experiments/search) ---
       - name: Wait for MLflow server (EC2:5000)
         env:
           MLFLOW_HOST: ${{ secrets.EC2_PUBLIC_IP }}
         run: |
           for i in {1..30}; do
-            if curl -s "http://${MLFLOW_HOST}:5000/api/2.0/mlflow/experiments/list" >/dev/null; then
+            if curl -s -X POST "http://${MLFLOW_HOST}:5000/api/2.0/mlflow/experiments/search" \
+                 -H 'Content-Type: application/json' -d '{}' >/dev/null; then
               echo "MLflow is up"; exit 0
             fi
             echo "Waiting for MLflow... ($i/30)"; sleep 2
@@ -72,6 +73,28 @@ jobs:
             -v ${{ github.workspace }}/models:/app/models \
             mlopsdemo/housing-api:${{ github.sha }} \
             python src/train.py
+
+      # --- DVC: Track the deployed model and push to S3 ---
+      - name: Ensure DVC remote points to S3 prefix
+        run: |
+          dvc remote list || dvc remote add -d myremote s3://mlops-grp13/mlops-app
+          dvc remote modify myremote url s3://mlops-grp13/mlops-app
+
+      - name: DVC-track deployed model & push
+        run: |
+          test -f models/best_model.pkl || (echo "models/best_model.pkl missing" && ls -la models/ && exit 1)
+          dvc add models/best_model.pkl
+          dvc push -v
+          git add models/best_model.pkl.dvc
+          test -f dvc.lock && git add dvc.lock || true
+
+      - name: Commit model pointer (.dvc) back to repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(dvc): track best_model.pkl in S3 via DVC"
+          commit_user_name: ci-bot
+          commit_user_email: ci-bot@example.com
+          push_options: --force-with-lease
 
       # --- Push images to Docker Hub ---
       - name: Docker Hub login
@@ -104,8 +127,15 @@ jobs:
             set -e
             cd ~/mlops-app
             docker pull mlopsdemo/housing-api:latest
-            docker compose down || true
-            docker compose up -d --remove-orphans
+            if command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE="docker-compose"
+            elif docker compose version >/dev/null 2>&1; then
+              COMPOSE="docker compose"
+            else
+              echo "Docker Compose not installed"; exit 1
+            fi
+            $COMPOSE down || true
+            $COMPOSE up -d --remove-orphans
             docker ps
           EOF
 
