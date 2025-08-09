@@ -8,3 +8,5 @@
 # models: ignore binaries, keep .dvc pointer
 /models/*
 !/models/*.dvc
+/models/*
+!/models/*.dvc
