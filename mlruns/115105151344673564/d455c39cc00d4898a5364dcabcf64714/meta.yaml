@@ -1,0 +1,14 @@
+artifact_uri: file:///home/arv/study/repo/mlops-automation/mlruns/115105151344673564/d455c39cc00d4898a5364dcabcf64714/artifacts
+end_time: 1753633821124
+entry_point_name: ''
+experiment_id: '115105151344673564'
+lifecycle_stage: active
+run_id: d455c39cc00d4898a5364dcabcf64714
+run_name: LinearRegression
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1753633818841
+status: 3
+tags: []
+user_id: arv
