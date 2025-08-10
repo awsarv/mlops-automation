@@ -17,9 +17,8 @@ It follows best practices for **reproducibility**, **automation**, and **observa
 .
 ├── data/                         # Raw & processed datasets
 ├── models/                       # Saved model files
-├── notebooks/                    # Jupyter notebooks for EDA & experiments
 ├── src/                          # Source code for training & API
-├── mlruns/                        # MLflow experiment tracking
+├── mlruns/                       # MLflow experiment tracking
 ├── grafana/provisioning/         # Dashboards & datasources
 ├── .github/workflows/            # CI/CD pipelines
 ├── Dockerfile                    # API container definition
@@ -168,4 +167,5 @@ docker run -d -p 8000:8000 mlopsdemo/housing-api:latest
 | Part 5 – Logging & Monitoring | Prometheus + Grafana | ✅ |
 | Part 6 – Summary & Demo | README + Video | ✅ |
 | Bonus | Validation + Retraining Hooks | ✅ |
+
 
