@@ -70,15 +70,18 @@ It follows best practices for **reproducibility**, **automation**, and **observa
 
 ---
 
-## 🖥️ Architecture Diagram
-```plaintext
-[Dataset] → [Preprocessing] → [Model Training + MLflow] → [Best Model Registry]
-    ↓
-[FastAPI Prediction API] → [Docker Container] → [Deployment: EC2/Local]
-    ↓
-[Prometheus Metrics] → [Grafana Dashboard]
-```
+## 🖥 Architecture Diagram
 
+```mermaid
+flowchart TD
+    A[Dataset] --> B[Preprocessing]
+    B --> C[Model Training + MLflow]
+    C --> D[Best Model Registry]
+    D --> E[FastAPI Prediction API]
+    E --> F[Docker Container]
+    F --> G[Deployment: EC2 / Local]
+    G --> H[Prometheus Metrics]
+    H --> I[Grafana Dashboard]
 ---
 
 ## 📊 Monitoring & Observability
