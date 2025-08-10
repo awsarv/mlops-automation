@@ -1,4 +1,4 @@
-name: CI/CD Deploy to EC2 with Monitoring
+name: CI/CD MLOps Automation
 
 on:
   push:
@@ -199,3 +199,4 @@ jobs:
 
       - name: Cleanup key
         run: rm -f ec2_deploy_key
+
