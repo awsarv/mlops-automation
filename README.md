@@ -82,6 +82,7 @@ flowchart TD
     F --> G[Deployment: EC2 / Local]
     G --> H[Prometheus Metrics]
     H --> I[Grafana Dashboard]
+
 ---
 
 ## 📊 Monitoring & Observability
