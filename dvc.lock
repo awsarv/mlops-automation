@@ -1,0 +1,14 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python src/data_prep.py
+    deps:
+    - path: src/data_prep.py
+      hash: md5
+      md5: 3eb7558561f7dd7ca4f268ca88dcce94
+      size: 248
+    outs:
+    - path: data/california_housing.csv
+      hash: md5
+      md5: ca5b757f0729c68d74d05bf9d9ca8486
+      size: 1895154

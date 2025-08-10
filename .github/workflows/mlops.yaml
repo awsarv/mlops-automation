@@ -1,76 +1,202 @@
-name: CI/CD Deploy to EC2 with Monitoring
+name: CI/CD MLOps Automation
 
 on:
   push:
-    branches: [mlops]
+    branches: [ mlops ]
   workflow_dispatch:
-  
 
+# <-- IMPORTANT: allow write access for the push step
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  build-and-deploy:
+  build-train-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # ensure we’re on the triggering branch with full history
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Lint code
+      - name: Install base tools
         run: |
-          pip install flake8
-          flake8 src/
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install "dvc[s3]" flake8
 
-      - name: Train and log models via Docker (shared volumes)
+      - name: Lint
+        run: flake8 src/
+
+      # --- DVC: pull from S3 and materialize per dvc.lock ---
+      - name: Configure AWS creds (for DVC S3)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: DVC pull & checkout data
         run: |
-          mkdir -p mlruns models data
+          rm -f data/california_housing.csv || true
+          dvc pull -v
+          dvc checkout -v
+          ls -lh data/ || true
+
+      # --- Build image FIRST (used for training + serving) ---
+      - name: Build image
+        run: |
+          docker build -t mlopsdemo/housing-api:${{ github.sha }} -t mlopsdemo/housing-api:latest .
+
+      # --- Wait for MLflow tracking server on EC2 (use POST /experiments/search) ---
+      - name: Wait for MLflow server (EC2:5000)
+        env:
+          MLFLOW_HOST: ${{ secrets.EC2_PUBLIC_IP }}
+        run: |
+          for i in {1..30}; do
+            if curl -s -X POST "http://${MLFLOW_HOST}:5000/api/2.0/mlflow/experiments/search" \
+                 -H 'Content-Type: application/json' -d '{}' >/dev/null; then
+              echo "MLflow is up"; exit 0
+            fi
+            echo "Waiting for MLflow... ($i/30)"; sleep 2
+          done
+          echo "MLflow not reachable"; exit 1
+
+      # --- Train & log to EC2 MLflow server ---
+      - name: Train and log models to MLflow server
+        env:
+          MLFLOW_TRACKING_URI: http://${{ secrets.EC2_PUBLIC_IP }}:5000
+          GIT_PYTHON_REFRESH: quiet
+        run: |
           docker run --rm \
+            -e MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI}" \
             -v ${{ github.workspace }}/data:/app/data \
             -v ${{ github.workspace }}/models:/app/models \
-            -v ${{ github.workspace }}/mlruns:/mlflow/mlruns \
-            -e MLFLOW_TRACKING_URI=file:/mlflow/mlruns \
-            mlopsdemo/housing-api:latest \
+            mlopsdemo/housing-api:${{ github.sha }} \
             python src/train.py
 
-      - name: Build, tag, and push Docker image to Docker Hub
+      # --- DVC: ensure remote points to S3 prefix ---
+      - name: Ensure DVC remote points to S3 prefix
         run: |
-          docker build -t mlopsdemo/housing-api:latest .
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | \
-            docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          dvc remote list || dvc remote add -d myremote s3://mlops-grp13/mlops-app
+          dvc remote modify myremote url s3://mlops-grp13/mlops-app
+
+      # --- Make sure raw model binaries are ignored; keep .dvc pointers tracked ---
+      - name: Ensure .gitignore rules for models
+        run: |
+          grep -qxF '/models/*' .gitignore || echo '/models/*' >> .gitignore
+          grep -qxF '!/models/*.dvc' .gitignore || echo '!/models/*.dvc' >> .gitignore
+          git add .gitignore
+          git -c user.name="ci-bot" -c user.email="ci-bot@example.com" \
+            commit -m "ci: ignore raw model binaries; keep .dvc" || true
+
+      # --- DVC: untrack raw file if Git-tracked, add pointer if missing, push to S3 ---
+      - name: DVC-track deployed model & push
+        run: |
+          set -e
+          test -f models/best_model.pkl || (echo "models/best_model.pkl missing" && ls -la models/ && exit 1)
+
+          # If the raw model is tracked by Git, untrack it
+          if git ls-files --error-unmatch models/best_model.pkl >/dev/null 2>&1; then
+            echo "Untracking models/best_model.pkl from Git index..."
+            git rm --cached models/best_model.pkl
+            git -c user.name="ci-bot" -c user.email="ci-bot@example.com" \
+              commit -m "ci: stop tracking models/best_model.pkl" || true
+          fi
+
+          # Add to DVC only if pointer not present
+          if [ ! -f models/best_model.pkl.dvc ]; then
+            echo "DVC-adding models/best_model.pkl..."
+            dvc add models/best_model.pkl
+          else
+            echo "Pointer exists; skipping dvc add."
+          fi
+
+          # Push to remote and stage pointer/lock
+          dvc push -v
+          git add models/best_model.pkl.dvc
+          test -f dvc.lock && git add dvc.lock || true
+
+      # --- Commit/push the .dvc pointer back to the same branch; fallback to PR if push blocked ---
+      - name: Push .dvc pointer (direct)
+        id: push-pointer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -e
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          # Only commit if there are staged changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(dvc): track best_model.pkl in S3 via DVC"
+            git push "https://${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${BRANCH}"
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Open PR with .dvc pointer (fallback)
+        if: failure() && steps.push-pointer.outcome == 'failure'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ github.token }}
+          commit-message: "chore(dvc): track best_model.pkl in S3 via DVC"
+          title: "chore(dvc): track best_model.pkl pointer"
+          body: "CI couldn’t push to `${{ github.ref_name }}` (protection/permissions). This PR contains the DVC pointer update."
+          branch: "ci/dvc-pointer-${{ github.run_id }}"
+          base: ${{ github.ref_name }}
+
+      # --- Push images to Docker Hub ---
+      - name: Docker Hub login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Push images
+        run: |
+          docker push mlopsdemo/housing-api:${{ github.sha }}
           docker push mlopsdemo/housing-api:latest
 
-      - name: Create .env for Docker Compose
-        run: |
-          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" > .env
+      # --- Deploy to EC2 ---
+      - name: Prepare .env
+        run: echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" > .env
 
       - name: Save SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > ec2_deploy_key
           chmod 600 ec2_deploy_key
 
-      - name: Copy code and .env to EC2
+      - name: Rsync code to EC2
         run: |
           rsync -az -e "ssh -o StrictHostKeyChecking=no -i ec2_deploy_key" . ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }}:/home/${{ secrets.EC2_SSH_USER }}/mlops-app/
-          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key ${{ secrets.EC2_SSH_USER }}@${{ secrets.EC2_PUBLIC_IP }} "cd mlops-app && ls -al .env"
 
-      - name: Remote deploy on EC2 (docker-compose up)
+      - name: Compose up on EC2
         env:
           EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
           EC2_SSH_USER: ${{ secrets.EC2_SSH_USER }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key $EC2_SSH_USER@$EC2_PUBLIC_IP << EOF
-            cd mlops-app
+          ssh -o StrictHostKeyChecking=no -i ec2_deploy_key $EC2_SSH_USER@$EC2_PUBLIC_IP << 'EOF'
+            set -e
+            cd ~/mlops-app
             docker pull mlopsdemo/housing-api:latest
-            docker-compose down || true
-            docker-compose up -d --remove-orphans
+            if command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE="docker-compose"
+            elif docker compose version >/dev/null 2>&1; then
+              COMPOSE="docker compose"
+            else
+              echo "Docker Compose not installed"; exit 1
+            fi
+            $COMPOSE down || true
+            $COMPOSE up -d --remove-orphans
+            docker ps
           EOF
 
-      - name: Cleanup SSH key
+      - name: Cleanup key
         run: rm -f ec2_deploy_key
+

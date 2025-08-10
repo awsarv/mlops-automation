@@ -1,9 +1,8 @@
 scikit-learn
 pandas
-mlflow
+mlflow==2.12.2
 joblib
 fastapi
 uvicorn
 pydantic
 prometheus-client
-

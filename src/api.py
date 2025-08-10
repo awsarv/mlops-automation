@@ -1,24 +1,73 @@
 from fastapi import FastAPI, Response
 from pydantic import BaseModel
-import joblib
-import numpy as np
+import os
+import json
 import logging
 import sqlite3
-import os
-import pandas as pd
+import numpy as np
+import joblib
+import pandas as pd  # only used by /retrain
 from sklearn.linear_model import LinearRegression
-from prometheus_client import Counter, generate_latest
+from prometheus_client import Counter, Histogram, generate_latest
+from prometheus_client.exposition import CONTENT_TYPE_LATEST
 
-# ----- Load paths from environment -----
-log_path = os.getenv("LOG_PATH", "/app/logs/api.log")
-db_path = os.getenv("DB_PATH", "/app/logs/api_requests.db")
-model_path = os.getenv("MODEL_PATH", "/app/models/best_model.pkl")
 
-# ----- Model Loading -----
-model = joblib.load(model_path)
+# ----- Paths/Env -----
+LOG_PATH = os.getenv("LOG_PATH", "/app/logs/api.log")
+DB_PATH = os.getenv("DB_PATH", "/app/logs/api_requests.db")
+MODEL_PATH = os.getenv("MODEL_PATH", "/app/models/best_model.pkl")
+FEATURE_ORDER_PATH = os.getenv(
+    "FEATURE_ORDER_PATH", "/app/models/feature_order.json"
+)
 
-# ----- API and Schema Setup -----
-app = FastAPI()
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+
+# ----- Logging -----
+logging.basicConfig(
+    filename=LOG_PATH,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+
+
+# ----- SQLite -----
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+c = conn.cursor()
+c.execute("PRAGMA journal_mode=WAL;")
+c.execute("PRAGMA synchronous=NORMAL;")
+c.execute(
+    """
+CREATE TABLE IF NOT EXISTS requests(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    MedInc REAL,
+    HouseAge REAL,
+    AveRooms REAL,
+    AveBedrms REAL,
+    Population REAL,
+    AveOccup REAL,
+    Latitude REAL,
+    Longitude REAL,
+    Prediction REAL,
+    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+"""
+)
+conn.commit()
+
+
+# ----- Metrics -----
+LATENCY = Histogram(
+    "inference_latency_seconds", "Prediction latency in seconds"
+)
+PREDICTIONS = Counter(
+    "predictions_total", "Total prediction requests", ["status"]
+)
+
+
+# ----- App/Schema -----
+app = FastAPI(title="Housing Inference API")
 
 
 class Features(BaseModel):
@@ -32,125 +81,85 @@ class Features(BaseModel):
     Longitude: float
 
 
-# ----- File Logging Setup -----
-logging.basicConfig(
-    filename=log_path,
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s"
-)
+# ----- Model & feature order -----
+if os.path.exists(FEATURE_ORDER_PATH):
+    with open(FEATURE_ORDER_PATH) as f:
+        FEATURE_ORDER = json.load(f)
+else:
+    FEATURE_ORDER = [
+        "MedInc",
+        "HouseAge",
+        "AveRooms",
+        "AveBedrms",
+        "Population",
+        "AveOccup",
+        "Latitude",
+        "Longitude",
+    ]
 
-# ----- SQLite Logging Setup -----
-conn = sqlite3.connect(db_path, check_same_thread=False)
-c = conn.cursor()
-c.execute(
-    (
-        "CREATE TABLE IF NOT EXISTS requests ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "MedInc REAL,"
-        "HouseAge REAL,"
-        "AveRooms REAL,"
-        "AveBedrms REAL,"
-        "Population REAL,"
-        "AveOccup REAL,"
-        "Latitude REAL,"
-        "Longitude REAL,"
-        "Prediction REAL,"
-        "Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)"
-    )
-)
-conn.commit()
-
-# ----- Prometheus Metric Setup -----
-PREDICTIONS = Counter(
-    "predictions_total",
-    "Total prediction requests served"
-)
+model = joblib.load(MODEL_PATH)
 
 
-@app.post("/predict")
-def predict(features: Features):
-    """
-    Receives JSON with California Housing features,
-    returns predicted median house value.
-    Logs request to file and SQLite, updates Prometheus counter.
-    """
-    data = np.array(
-        [[
-            features.MedInc,
-            features.HouseAge,
-            features.AveRooms,
-            features.AveBedrms,
-            features.Population,
-            features.AveOccup,
-            features.Latitude,
-            features.Longitude
-        ]]
-    )
-    prediction = float(model.predict(data)[0])
-
-    # File logging
-    logging.info(
-        "Request: %s | Prediction: %s",
-        features.dict(),
-        prediction
-    )
-
-    # SQLite logging
-    c.execute(
-        (
-            "INSERT INTO requests ("
-            "MedInc, HouseAge, AveRooms, AveBedrms, Population, AveOccup,"
-            "Latitude, Longitude, Prediction"
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        ),
-        (
-            features.MedInc,
-            features.HouseAge,
-            features.AveRooms,
-            features.AveBedrms,
-            features.Population,
-            features.AveOccup,
-            features.Latitude,
-            features.Longitude,
-            prediction
-        )
-    )
-    conn.commit()
-
-    # Prometheus metric
-    PREDICTIONS.inc()
-
-    return {"prediction": prediction}
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 @app.get("/metrics")
 def metrics():
-    """
-    Exposes Prometheus metrics for monitoring.
-    """
-    return Response(generate_latest(), media_type="text/plain")
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.post("/predict")
+def predict(features: Features):
+    with LATENCY.time():
+        try:
+            row = [getattr(features, col) for col in FEATURE_ORDER]
+            data = np.array([row], dtype=float)
+            prediction = float(model.predict(data)[0])
+
+            logging.info(
+                "Request=%s Prediction=%s",
+                features.model_dump(),
+                prediction,
+            )
+
+            c.execute(
+                (
+                    "INSERT INTO requests ("
+                    "MedInc, HouseAge, AveRooms, AveBedrms, Population, "
+                    "AveOccup, Latitude, Longitude, Prediction"
+                    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                ),
+                tuple(row) + (prediction,),
+            )
+            conn.commit()
+
+            PREDICTIONS.labels("ok").inc()
+            return {"prediction": prediction}
+        except Exception:
+            logging.exception("Prediction failed")
+            PREDICTIONS.labels("error").inc()
+            raise
 
 
 @app.post("/retrain")
 def retrain():
-    """
-    Actually retrain the model and reload it for serving.
-    """
-    # Load data
+    # Retrain in-process for demo; for real use, make this an async job
     df = pd.read_csv("data/california_housing.csv")
-    X = df.drop("MedHouseVal", axis=1)
-    y = df["MedHouseVal"]
+    x_mat = df.drop("MedHouseVal", axis=1)
+    y_vec = df["MedHouseVal"]
 
-    # Retrain model
     retrained_model = LinearRegression()
-    retrained_model.fit(X, y)
+    retrained_model.fit(x_mat, y_vec)
 
-    # Save new model to disk
-    joblib.dump(retrained_model, "models/best_model.pkl")
+    joblib.dump(retrained_model, MODEL_PATH)
+    with open(FEATURE_ORDER_PATH, "w") as f:
+        json.dump(list(x_mat.columns), f)
 
-    # Update in-memory model for API
-    global model
+    global model, FEATURE_ORDER
     model = retrained_model
+    FEATURE_ORDER = list(x_mat.columns)
 
-    logging.info("Retraining completed and model updated in memory.")
-    return {"status": "Retraining completed and model updated!"}
+    logging.info("Retraining completed; model reloaded.")
+    return {"status": "retrained"}

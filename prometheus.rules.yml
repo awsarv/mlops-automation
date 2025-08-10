@@ -1,0 +1,21 @@
+groups:
+- name: housing-api-rules
+  rules:
+  - record: job:predictions:rps
+    expr: sum by (job) (rate(predictions_total[5m]))
+
+  - record: job:predictions:error_rate
+    expr: sum(rate(predictions_total{status="error"}[5m]))
+          /
+          clamp_min(sum(rate(predictions_total[5m])), 1e-6)
+
+  - record: job:latency:avg_seconds
+    expr: sum(rate(inference_latency_seconds_sum[5m]))
+          /
+          sum(rate(inference_latency_seconds_count[5m]))
+
+  - record: job:latency:p95
+    expr: histogram_quantile(
+            0.95,
+            sum by (le) (rate(inference_latency_seconds_bucket[5m]))
+          )

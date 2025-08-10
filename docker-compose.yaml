@@ -1,32 +1,40 @@
 version: "3.8"
+
 services:
   app:
     image: mlopsdemo/housing-api:latest
     container_name: housing-api
     restart: always
+    depends_on:
+      - mlflow
     ports:
       - "8000:8000"
+    environment:
+      - LOG_PATH=/app/logs/api.log
+      - DB_PATH=/app/logs/api_requests.db
+      # Point API (if it retrains) to the tracking server:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - FEATURE_ORDER_PATH=/app/models/feature_order.json
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
       - ./models:/app/models
-      - ./mlruns:/mlflow/mlruns
-    environment:
-      - LOG_PATH=/app/logs/api.log
-      - DB_PATH=/app/logs/api_requests.db
-      - MLFLOW_TRACKING_URI=file:/mlflow/mlruns
+      # not required for serving, but handy for parity:
+      - ./mlflow_store:/mlflow_store
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v2.54.1
     container_name: prometheus
     restart: always
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.rules.yml:/etc/prometheus/prometheus.rules.yml
+
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:11.1.4
     container_name: grafana
     restart: always
     ports:
@@ -44,13 +52,14 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./mlflow.db:/mlflow.db
-      - ./models:/models
-      - ./mlruns:/mlflow/mlruns
-    working_dir: /mlflow
-    command: mlflow ui --backend-store-uri sqlite:///mlflow.db --default-artifact-root file:/mlflow/mlruns --host 0.0.0.0 --port 5000
-    environment:
-      - MLFLOW_TRACKING_URI=file:/mlflow/mlruns
+      - ./mlflow_store:/mlflow_store
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow_store/mlflow.db
+      --default-artifact-root /mlflow_store/artifacts
+      --serve-artifacts
 
 volumes:
   grafana-data:
