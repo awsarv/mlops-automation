@@ -220,8 +220,10 @@ jobs:
 
       - name: Train model
         env:
-          MLFLOW_TRACKING_URI: file:mlruns
-        run: python src/train.py
+          MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
+        run: |
+          mkdir -p mlruns models
+          python src/train.py
 
       - name: Upload model artifacts to S3
         run: |
