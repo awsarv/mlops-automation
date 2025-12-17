@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: housing-api
+  name: fraud-api
   namespace: devsecops-mlops
   labels:
-    app: housing-api
+    app: fraud-api
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "8000"
@@ -16,15 +16,15 @@ spec:
       protocol: TCP
       name: http
   selector:
-    app: housing-api
+    app: fraud-api
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: housing-api-metrics
+  name: fraud-api-metrics
   namespace: devsecops-mlops
   labels:
-    app: housing-api
+    app: fraud-api
 spec:
   type: ClusterIP
   ports:
@@ -33,4 +33,4 @@ spec:
       protocol: TCP
       name: metrics
   selector:
-    app: housing-api
+    app: fraud-api

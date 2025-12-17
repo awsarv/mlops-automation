@@ -9,7 +9,7 @@ on:
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY: devsecops-mlops/housing-api
+  ECR_REPOSITORY: devsecops-mlops/fraud-api
   EKS_CLUSTER_NAME: devsecops-mlops-cluster
   S3_BUCKET: devsecops-mlops-artifacts-760829799650
 
@@ -275,7 +275,7 @@ jobs:
           kubectl apply -f k8s/base/
 
           # Wait for rollout
-          kubectl rollout status deployment/housing-api -n devsecops-mlops --timeout=300s
+          kubectl rollout status deployment/fraud-api -n devsecops-mlops --timeout=300s
 
       - name: Verify deployment
         run: |

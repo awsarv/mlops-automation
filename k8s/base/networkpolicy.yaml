@@ -1,12 +1,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: housing-api-network-policy
+  name: fraud-api-network-policy
   namespace: devsecops-mlops
 spec:
   podSelector:
     matchLabels:
-      app: housing-api
+      app: fraud-api
   policyTypes:
     - Ingress
     - Egress

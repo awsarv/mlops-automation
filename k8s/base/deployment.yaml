@@ -1,34 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: housing-api
+  name: fraud-api
   namespace: devsecops-mlops
   labels:
-    app: housing-api
+    app: fraud-api
     version: v1
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: housing-api
+      app: fraud-api
   template:
     metadata:
       labels:
-        app: housing-api
+        app: fraud-api
         version: v1
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8000"
         prometheus.io/path: "/metrics"
     spec:
-      serviceAccountName: housing-api-sa
+      serviceAccountName: fraud-api-sa
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
       containers:
-        - name: housing-api
-          image: ECR_REGISTRY/devsecops-mlops/housing-api:IMAGE_TAG
+        - name: fraud-api
+          image: ECR_REGISTRY/devsecops-mlops/fraud-api:IMAGE_TAG
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
