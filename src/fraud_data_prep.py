@@ -22,12 +22,7 @@ print(f"Generating {N_SAMPLES} transactions ({n_fraud} fraud, {n_legitimate} leg
 # Generate legitimate transactions
 legitimate = pd.DataFrame({
     'amount': np.random.exponential(scale=50, size=n_legitimate).clip(1, 5000),
-    'hour': np.random.choice(range(24), size=n_legitimate, p=[
-        0.01, 0.005, 0.005, 0.005, 0.01, 0.02,  # 0-5 AM (low activity)
-        0.04, 0.06, 0.08, 0.09, 0.09, 0.08,     # 6-11 AM (morning)
-        0.08, 0.07, 0.06, 0.06, 0.06, 0.07,     # 12-5 PM (afternoon)
-        0.07, 0.06, 0.05, 0.04, 0.03, 0.02      # 6-11 PM (evening)
-    ]),
+    'hour': np.random.randint(6, 23, size=n_legitimate),  # Mostly daytime
     'day_of_week': np.random.choice(range(7), size=n_legitimate),
     'merchant_category': np.random.choice(range(15), size=n_legitimate),
     'distance_from_home': np.random.exponential(scale=10, size=n_legitimate).clip(0, 100),
@@ -43,17 +38,9 @@ legitimate = pd.DataFrame({
 # Generate fraudulent transactions (different patterns)
 fraud = pd.DataFrame({
     'amount': np.random.exponential(scale=500, size=n_fraud).clip(100, 10000),
-    'hour': np.random.choice(range(24), size=n_fraud, p=[
-        0.08, 0.08, 0.08, 0.07, 0.06, 0.04,     # 0-5 AM (higher fraud)
-        0.03, 0.03, 0.03, 0.03, 0.04, 0.04,     # 6-11 AM
-        0.04, 0.04, 0.04, 0.04, 0.04, 0.04,     # 12-5 PM
-        0.04, 0.04, 0.03, 0.03, 0.02, 0.03      # 6-11 PM
-    ]),
+    'hour': np.random.randint(0, 6, size=n_fraud),  # More fraud at night
     'day_of_week': np.random.choice(range(7), size=n_fraud),
-    'merchant_category': np.random.choice(range(15), size=n_fraud, p=[
-        0.15, 0.12, 0.10, 0.08, 0.08, 0.07, 0.07, 0.06,
-        0.06, 0.05, 0.05, 0.04, 0.03, 0.02, 0.02
-    ]),
+    'merchant_category': np.random.randint(0, 15, size=n_fraud),
     'distance_from_home': np.random.exponential(scale=50, size=n_fraud).clip(10, 500),
     'distance_from_last_transaction': np.random.exponential(scale=30, size=n_fraud).clip(5, 200),
     'ratio_to_median_purchase': np.random.normal(3.0, 1.5, size=n_fraud).clip(1.5, 10),
