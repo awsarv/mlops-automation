@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: housing-api
+  namespace: devsecops-mlops
+  labels:
+    app: housing-api
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector:
+    app: housing-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: housing-api-metrics
+  namespace: devsecops-mlops
+  labels:
+    app: housing-api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+      name: metrics
+  selector:
+    app: housing-api

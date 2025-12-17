@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: housing-api
+  namespace: devsecops-mlops
+  labels:
+    app: housing-api
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: housing-api
+  template:
+    metadata:
+      labels:
+        app: housing-api
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: housing-api-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: housing-api
+          image: ECR_REGISTRY/devsecops-mlops/housing-api:IMAGE_TAG
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          env:
+            - name: MODEL_PATH
+              value: "/app/models/best_model.pkl"
+            - name: LOG_PATH
+              value: "/app/logs/api.log"
+            - name: DB_PATH
+              value: "/app/logs/api_requests.db"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+            - name: models
+              mountPath: /app/models
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: models
+          emptyDir: {}
+      initContainers:
+        - name: download-model
+          image: amazon/aws-cli:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              aws s3 cp s3://devsecops-mlops-artifacts-760829799650/models/best_model.pkl /app/models/best_model.pkl
+              aws s3 cp s3://devsecops-mlops-artifacts-760829799650/models/feature_order.json /app/models/feature_order.json
+          volumeMounts:
+            - name: models
+              mountPath: /app/models
+          env:
+            - name: AWS_REGION
+              value: "ap-south-1"

@@ -1,171 +1,243 @@
-# MLOps Automation Project – Housing Price Prediction
+# DevSecOps Framework for Machine Learning
 
-## 📌 Project Overview
-This project implements a complete **MLOps pipeline** for housing price prediction, covering:
-- Data versioning  
-- Model training & experiment tracking  
-- API service deployment with Docker  
-- CI/CD automation using GitHub Actions  
-- Logging & monitoring with Prometheus and Grafana  
+## A Comprehensive Security-Integrated MLOps Pipeline
 
-It follows best practices for **reproducibility**, **automation**, and **observability**.
+[![CI/CD Pipeline](https://github.com/awsarv/mlops-automation/actions/workflows/devsecops-pipeline.yaml/badge.svg)](https://github.com/awsarv/mlops-automation/actions)
+[![Security Scan](https://img.shields.io/badge/security-scanned-green.svg)](./docs/ml-threat-model.md)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 ---
 
-## 🗂 Repository Structure
+## Overview
+
+This project implements a **DevSecOps Framework for Machine Learning** that integrates automated security auditing and threat modeling into cloud-native CI/CD/CT pipelines. It demonstrates best practices for securing ML systems from development to production.
+
+**Dissertation Project**: M.Tech in AI/ML, BITS Pilani
+**Author**: Arvind Kumar (2023AC05606)
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DevSecOps ML Pipeline                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  GitHub ──► GitHub Actions ──► ECR ──► EKS (Kubernetes)                     │
+│                  │                          │                               │
+│            ┌─────┴─────┐              ┌─────┴─────┐                         │
+│            │ Security  │              │ Runtime   │                         │
+│            │  Gates    │              │ Security  │                         │
+│            ├───────────┤              ├───────────┤                         │
+│            │ Bandit    │              │ OPA       │                         │
+│            │ Trivy     │              │ Network   │                         │
+│            │ pip-audit │              │ Policies  │                         │
+│            └───────────┘              └───────────┘                         │
+│                                             │                               │
+│                                             ▼                               │
+│            MLflow ◄──────────────────► Prometheus + Grafana                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Features
+
+### Security Integration
+- **SAST**: Bandit for Python code analysis
+- **SCA**: pip-audit & Safety for dependency scanning
+- **Container Security**: Trivy & Grype for image scanning
+- **Policy Enforcement**: OPA/Gatekeeper for Kubernetes policies
+- **Network Security**: Kubernetes NetworkPolicies
+
+### ML Pipeline
+- **Data Versioning**: DVC with S3 backend
+- **Experiment Tracking**: MLflow
+- **Model Training**: scikit-learn (Linear Regression, Decision Tree)
+- **API Service**: FastAPI with Prometheus metrics
+
+### Infrastructure
+- **Container Registry**: Amazon ECR (scan-on-push)
+- **Orchestration**: Amazon EKS (Kubernetes)
+- **CI/CD**: GitHub Actions
+- **Monitoring**: Prometheus + Grafana
+
+---
+
+## Repository Structure
+
 ```
 .
-├── data/                         # Raw & processed datasets
-├── models/                       # Saved model files
-├── src/                          # Source code for training & API
-├── mlruns/                       # MLflow experiment tracking
-├── grafana/provisioning/         # Dashboards & datasources
-├── .github/workflows/            # CI/CD pipelines
-├── Dockerfile                    # API container definition
-└── README.md                     # Project documentation
+├── .github/workflows/          # CI/CD pipeline definitions
+│   └── devsecops-pipeline.yaml # Main DevSecOps pipeline
+├── docs/                       # Documentation
+│   ├── framework-architecture.md
+│   └── ml-threat-model.md      # STRIDE threat analysis
+├── k8s/                        # Kubernetes manifests
+│   ├── base/                   # Application manifests
+│   └── monitoring/             # Prometheus & Grafana
+├── security/                   # Security configurations
+│   └── policies/               # OPA Rego policies
+├── src/                        # Application source code
+│   ├── api.py                  # FastAPI inference service
+│   ├── train.py                # Model training script
+│   └── data_prep.py            # Data preparation
+├── Dockerfile                  # Multi-stage secure build
+├── eks-cluster.yaml            # EKS cluster configuration
+└── requirements.txt            # Python dependencies (pinned)
 ```
 
 ---
 
-## 🚀 Features Implemented
+## Quick Start
 
-### **Part 1 – Repository & Data Versioning** ✅
-- Clean GitHub repo structure
-- Dataset loading & preprocessing
-- Optional dataset tracking with **DVC**
-- Version-controlled code and data
+### Prerequisites
+- AWS CLI configured
+- kubectl installed
+- Docker installed
+- Python 3.10+
 
-### **Part 2 – Model Development & Experiment Tracking** ✅
-- Trained **Linear Regression** & **Decision Tree** models
-- Logged parameters, metrics, and artifacts in **MLflow**
-- Registered the best model for deployment
-
-### **Part 3 – API & Docker Packaging** ✅
-- Built a **FastAPI** prediction service
-- Accepts JSON input and returns model predictions
-- Containerized using **Docker**
-
-### **Part 4 – CI/CD with GitHub Actions** ✅
-- Automated **linting & testing** on code push
-- Built & pushed Docker image to Docker Hub
-- Deployment-ready via shell script or `docker run`
-
-### **Part 5 – Logging & Monitoring** ✅
-- Logged incoming requests and predictions
-- Integrated **Prometheus metrics** at `/metrics`
-- Configured **Grafana dashboard** for real-time API monitoring
-
-### **Part 6 – Summary & Demo** ✅
-- One-page architecture summary
-- Recorded 5-min demo video showcasing:
-  - Training
-  - API usage
-  - Monitoring dashboard
-
-### **Bonus Features** 🎯
-- Input validation using **Pydantic**
-- End-to-end monitoring with **Prometheus & Grafana**
-- Hooks for automated retraining on new data
-
----
-
-## 🖥️ Architecture Diagram
-```plaintext
-            ┌─────────────┐        ┌─────────────┐
-            │   Dataset   │        │  New Data   │
-            └──────┬──────┘        └──────┬──────┘
-                   │                     │
-             Data Versioning         Re-training Trigger
-                   │                     │
-              ┌────▼─────┐          ┌────▼─────┐
-              │   DVC    │          │ GitHub   │
-              │ (S3)     │          │ Actions  │
-              └────┬─────┘          └────┬─────┘
-                   │                     │
-         ┌─────────▼─────────┐   ┌───────▼────────┐
-         │  Model Training   │   │  CI/CD Deploy  │
-         │   (MLflow)        │   │  (Docker + EC2)│
-         └────────┬──────────┘   └───────┬────────┘
-                  │                      │
-         ┌────────▼────────┐     ┌───────▼─────────┐
-         │ Model Registry  │     │ FastAPI Service │
-         │ (MLflow)        │     │ /predict + /metrics
-         └────────┬────────┘     └───────┬─────────┘
-                  │                      │
-         ┌────────▼────────┐     ┌───────▼─────────┐
-         │ Prometheus      │     │ Grafana         │
-         │ Metrics Scrape  │     │ Dashboard       │
-         └─────────────────┘     └─────────────────┘
-
-```
-
----
-
-## 📊 Monitoring & Observability
-- **Prometheus** scrapes `/metrics` endpoint from FastAPI
-- **Grafana** displays API request rate, prediction latency, error counts
-- Pre-configured dashboard JSON in `grafana/provisioning/dashboards/`
-
----
-
-## 🐳 Docker Image
-Public Docker Hub Repository:  
-[https://hub.docker.com/r/mlopsdemo/housing-api](https://hub.docker.com/r/mlopsdemo/housing-api)
-
-**Pull the latest image:**
+### 1. Clone Repository
 ```bash
-docker pull mlopsdemo/housing-api:latest
+git clone https://github.com/awsarv/mlops-automation.git
+cd mlops-automation
+git checkout prod
 ```
 
-**Run the container locally:**
+### 2. Create EKS Cluster
 ```bash
-docker run -d -p 8000:8000 mlopsdemo/housing-api:latest
+eksctl create cluster -f eks-cluster.yaml
 ```
 
-**Access API:**
-- Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Metrics endpoint: [http://localhost:8000/metrics](http://localhost:8000/metrics)
+### 3. Deploy Application
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f k8s/base/namespace.yaml
+kubectl apply -f k8s/base/
+
+# Deploy monitoring
+kubectl apply -f k8s/monitoring/
+```
+
+### 4. Access Services
+```bash
+# Get API endpoint
+kubectl get svc -n devsecops-mlops housing-api
+
+# Get Grafana endpoint
+kubectl get svc -n monitoring grafana
+```
 
 ---
 
-## ⚡ Steps to Test End-to-End
-1. **Clone the repo**
-   ```bash
-   git clone <your-repo-url>
-   cd <your-repo-name>
-   ```
+## Security Scanning
 
-2. **Run Docker container**
-   ```bash
-   docker run -d -p 8000:8000 mlopsdemo/housing-api:latest
-   ```
+### Run Locally
+```bash
+# Install security tools
+pip install bandit pip-audit safety
 
-3. **Test API prediction**
-   ```bash
-   curl -X POST "http://localhost:8000/predict"    -H "Content-Type: application/json"    -d '{"feature1": 1.2, "feature2": 3.4, "feature3": 5.6}'
-   ```
+# Code analysis
+bandit -r src/
 
-4. **Check monitoring metrics**
-   - Prometheus: `http://<server-ip>:9090`
-   - Grafana Dashboard: `http://<server-ip>:3000`
+# Dependency scan
+pip-audit
 
-5. **View MLflow UI**
-   ```bash
-   mlflow ui --host 0.0.0.0 --port 5000
-   ```
-   Open in browser: `http://<server-ip>:5000`
+# Container scan (requires Trivy)
+trivy image <your-image>
+```
+
+### Pipeline Security Gates
+The CI/CD pipeline includes:
+1. **Bandit** - Python SAST
+2. **pip-audit** - Dependency CVE check
+3. **Trivy** - Container vulnerabilities
+4. **Grype** - Additional container scan
+5. **OPA** - Kubernetes policy compliance
 
 ---
 
-## 📄 Evaluation Mapping
-| Task | Implementation | Status |
-|------|----------------|--------|
-| Part 1 – Repo & Data Versioning | GitHub + DVC | ✅ |
-| Part 2 – Model Development & Tracking | MLflow + 2 Models | ✅ |
-| Part 3 – API & Docker | FastAPI + Docker | ✅ |
-| Part 4 – CI/CD | GitHub Actions | ✅ |
-| Part 5 – Logging & Monitoring | Prometheus + Grafana | ✅ |
-| Part 6 – Summary & Demo | README + Video | ✅ |
-| Bonus | Validation + Retraining Hooks | ✅ |
+## API Endpoints
 
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/predict` | POST | Model inference |
+| `/metrics` | GET | Prometheus metrics |
+| `/docs` | GET | Swagger UI |
 
+### Example Request
+```bash
+curl -X POST "http://<api-endpoint>/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "MedInc": 8.3252,
+    "HouseAge": 41.0,
+    "AveRooms": 6.984,
+    "AveBedrms": 1.023,
+    "Population": 322.0,
+    "AveOccup": 2.555,
+    "Latitude": 37.88,
+    "Longitude": -122.23
+  }'
+```
+
+---
+
+## Monitoring
+
+### Prometheus Metrics
+- `predictions_total` - Total prediction count
+- `inference_latency_seconds` - Prediction latency histogram
+- `process_*` - Process metrics
+
+### Grafana Dashboards
+- API Request Rate
+- Latency Percentiles (p50, p90, p95, p99)
+- Error Rate
+- Resource Usage
+
+---
+
+## Documentation
+
+- [Framework Architecture](./docs/framework-architecture.md)
+- [ML Threat Model (STRIDE)](./docs/ml-threat-model.md)
+- [OPA Security Policies](./security/policies/)
+
+---
+
+## AWS Resources
+
+| Resource | Name | Purpose |
+|----------|------|---------|
+| S3 | devsecops-mlops-artifacts-* | Model storage |
+| ECR | devsecops-mlops/housing-api | Container images |
+| EKS | devsecops-mlops-cluster | Kubernetes cluster |
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/security-enhancement`)
+3. Run security scans locally
+4. Commit changes
+5. Push and create PR
+
+---
+
+## License
+
+MIT License - see [LICENSE](./LICENSE)
+
+---
+
+## Author
+
+**Arvind Kumar**
+M.Tech in AI/ML, BITS Pilani
+Student ID: 2023AC05606
+
+**Supervisor**: Dr. Sheela Verma (IIT BHU)
+**Examiner**: Dr. Pratibha Verma (Turing, USA)

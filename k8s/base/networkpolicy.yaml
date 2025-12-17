@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: housing-api-network-policy
+  namespace: devsecops-mlops
+spec:
+  podSelector:
+    matchLabels:
+      app: housing-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from load balancer
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow traffic from Prometheus
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow DNS
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow HTTPS (for AWS APIs)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443

@@ -1,12 +1,64 @@
-/data/
- /logs/
- /mlflow_store/
- /mlruns/
- *.db
- .dvc/config.local
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
 
-# models: ignore binaries, keep .dvc pointer
-/models/*
-!/models/*.dvc
-/models/*
-!/models/*.dvc
+# Data & Models (tracked by DVC)
+/data/*.csv
+/models/*.pkl
+/models/*.json
+!/models/.gitkeep
+
+# DVC
+/data/*.csv.dvc
+.dvc/config.local
+.dvc/tmp/
+.dvc/cache/
+
+# Logs
+/logs/
+*.log
+*.db
+
+# MLflow
+/mlruns/
+/mlflow_store/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.env
+
+# AWS
+.aws/
+
+# Kubernetes secrets
+*-secret.yaml
+secrets/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+reports/
+
+# EKS creation logs
+eks-creation.log

@@ -1,0 +1,67 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: devsecops-mlops-cluster
+  region: ap-south-1
+  version: "1.29"
+
+# Use existing VPC or let eksctl create one
+# For student account, let eksctl manage VPC
+
+managedNodeGroups:
+  - name: mlops-workers
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 3
+    spot: true  # Use spot instances for cost savings (~70% cheaper)
+    volumeSize: 30
+    volumeType: gp3
+    labels:
+      role: mlops-worker
+    tags:
+      Project: devsecops-mlops
+      Environment: production
+    iam:
+      withAddonPolicies:
+        imageBuilder: true      # For ECR access
+        autoScaler: true        # For cluster autoscaler
+        cloudWatch: true        # For CloudWatch logging
+        albIngress: true        # For ALB Ingress Controller
+
+# Enable CloudWatch logging
+cloudWatch:
+  clusterLogging:
+    enableTypes:
+      - "api"
+      - "audit"
+      - "authenticator"
+      - "controllerManager"
+      - "scheduler"
+
+# IAM OIDC provider for service accounts
+iam:
+  withOIDC: true
+  serviceAccounts:
+    - metadata:
+        name: aws-load-balancer-controller
+        namespace: kube-system
+      wellKnownPolicies:
+        awsLoadBalancerController: true
+    - metadata:
+        name: ebs-csi-controller-sa
+        namespace: kube-system
+      wellKnownPolicies:
+        ebsCSIController: true
+
+# Addons
+addons:
+  - name: vpc-cni
+    attachPolicyARNs:
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+  - name: coredns
+  - name: kube-proxy
+  - name: aws-ebs-csi-driver
+    wellKnownPolicies:
+      ebsCSIController: true

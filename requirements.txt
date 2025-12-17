@@ -1,8 +1,21 @@
-scikit-learn
-pandas
+# ML & Data
+scikit-learn==1.4.0
+pandas==2.2.0
+numpy==1.26.3
+joblib==1.3.2
+
+# MLflow
 mlflow==2.12.2
-joblib
-fastapi
-uvicorn
-pydantic
-prometheus-client
+
+# API
+fastapi==0.109.2
+uvicorn==0.27.1
+pydantic==2.6.1
+
+# Monitoring
+prometheus-client==0.19.0
+
+# Security scanning (dev dependencies)
+bandit==1.7.7
+safety==3.0.1
+pip-audit==2.7.2
