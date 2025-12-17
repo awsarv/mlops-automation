@@ -51,7 +51,6 @@ This project implements a **DevSecOps Framework for Machine Learning** that inte
 - **Network Security**: Kubernetes NetworkPolicies
 
 ### ML Pipeline
-- **Data Versioning**: DVC with S3 backend
 - **Experiment Tracking**: MLflow
 - **Model Training**: scikit-learn (Random Forest, Logistic Regression)
 - **Use Case**: Credit Card Fraud Detection (Binary Classification)
@@ -80,9 +79,9 @@ This project implements a **DevSecOps Framework for Machine Learning** that inte
 ├── security/                   # Security configurations
 │   └── policies/               # OPA Rego policies
 ├── src/                        # Application source code
-│   ├── api.py                  # FastAPI inference service
-│   ├── train.py                # Model training script
-│   └── data_prep.py            # Data preparation
+│   ├── fraud_api.py            # FastAPI fraud detection service
+│   ├── fraud_train.py          # Model training script
+│   └── fraud_data_prep.py      # Synthetic data generation
 ├── Dockerfile                  # Multi-stage secure build
 ├── eks-cluster.yaml            # EKS cluster configuration
 └── requirements.txt            # Python dependencies (pinned)
@@ -123,7 +122,7 @@ kubectl apply -f k8s/monitoring/
 ### 4. Access Services
 ```bash
 # Get API endpoint
-kubectl get svc -n devsecops-mlops housing-api
+kubectl get svc -n devsecops-mlops fraud-api
 
 # Get Grafana endpoint
 kubectl get svc -n monitoring grafana
@@ -205,9 +204,11 @@ curl -X POST "http://<api-endpoint>/predict" \
 ## Monitoring
 
 ### Prometheus Metrics
-- `predictions_total` - Total prediction count
-- `inference_latency_seconds` - Prediction latency histogram
-- `process_*` - Process metrics
+- `fraud_predictions_total` - Total prediction count by status and result
+- `fraud_inference_latency_seconds` - Prediction latency histogram
+- `fraud_transactions_flagged_total` - Flagged fraud count
+- `fraud_model_confidence` - Model confidence distribution
+- `transaction_amount_dollars` - Transaction amount histogram
 
 ### Grafana Dashboards
 - API Request Rate
@@ -230,7 +231,7 @@ curl -X POST "http://<api-endpoint>/predict" \
 | Resource | Name | Purpose |
 |----------|------|---------|
 | S3 | devsecops-mlops-artifacts-* | Model storage |
-| ECR | devsecops-mlops/housing-api | Container images |
+| ECR | devsecops-mlops/fraud-api | Container images |
 | EKS | devsecops-mlops-cluster | Kubernetes cluster |
 
 ---

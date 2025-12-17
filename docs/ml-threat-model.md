@@ -2,7 +2,7 @@
 
 ## 1. System Overview
 
-This document provides a comprehensive threat model for the DevSecOps ML Pipeline implementing California Housing Price Prediction. The analysis follows the STRIDE methodology adapted for Machine Learning systems.
+This document provides a comprehensive threat model for the DevSecOps ML Pipeline implementing Credit Card Fraud Detection. The analysis follows the STRIDE methodology adapted for Machine Learning systems.
 
 ### 1.1 Architecture Components
 

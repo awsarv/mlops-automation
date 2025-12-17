@@ -44,7 +44,7 @@ This document describes the architecture of a comprehensive DevSecOps framework 
 │                      ┌───────────────────────────┼───────────────────────────┐      │
 │                      │         Kubernetes Cluster                            │      │
 │                      │  ┌─────────────┐    ┌─────────────┐    ┌───────────┐ │      │
-│                      │  │ Housing API │    │ Prometheus  │    │  Grafana  │ │      │
+│                      │  │  Fraud API  │    │ Prometheus  │    │  Grafana  │ │      │
 │                      │  │  (FastAPI)  │───►│ (Metrics)   │───►│(Dashboard)│ │      │
 │                      │  └─────────────┘    └─────────────┘    └───────────┘ │      │
 │                      │         │                                             │      │
@@ -97,10 +97,10 @@ This document describes the architecture of a comprehensive DevSecOps framework 
 #### 3.5 Application Layer
 | Service | Technology | Features |
 |---------|------------|----------|
-| API | FastAPI | /predict, /health, /metrics |
-| Model | scikit-learn | Linear Regression |
+| API | FastAPI | /predict, /health, /metrics, /model/info, /stats |
+| Model | scikit-learn | Random Forest (Fraud Classification) |
 | Tracking | MLflow | Experiment logging |
-| Data | DVC + S3 | Version control |
+| Data | S3 | Model artifact storage |
 
 #### 3.6 Monitoring Stack
 | Tool | Purpose | Metrics |

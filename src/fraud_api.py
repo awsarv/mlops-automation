@@ -1,6 +1,23 @@
 """
-Fraud Detection API
-Real-time credit card fraud detection service with Prometheus metrics.
+Fraud Detection API Service.
+
+This module implements a real-time credit card fraud detection REST API
+using FastAPI. It provides endpoints for fraud prediction, health monitoring,
+and Prometheus metrics collection.
+
+Architecture:
+    - FastAPI for REST API framework
+    - SQLite for request logging and audit trail
+    - Prometheus client for metrics exposition
+    - Joblib for model serialization
+
+Security Features:
+    - Input validation via Pydantic models
+    - Request logging for audit compliance
+    - Structured error handling
+
+Author: Arvind Kumar
+Version: 1.0.0
 """
 
 from fastapi import FastAPI, HTTPException, Response
@@ -16,7 +33,7 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest
 from prometheus_client.exposition import CONTENT_TYPE_LATEST
 
 
-# ----- Configuration -----
+# Configuration
 LOG_PATH = os.getenv("LOG_PATH", "/app/logs/api.log")
 DB_PATH = os.getenv("DB_PATH", "/app/logs/fraud_requests.db")
 MODEL_PATH = os.getenv("MODEL_PATH", "/app/models/best_model.pkl")
@@ -27,7 +44,7 @@ os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 
-# ----- Logging -----
+# Logging Configuration
 logging.basicConfig(
     filename=LOG_PATH,
     level=logging.INFO,
@@ -36,7 +53,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ----- SQLite for Request Logging -----
+# Database Setup for Audit Trail
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
 cursor.execute("PRAGMA journal_mode=WAL;")
@@ -63,7 +80,7 @@ CREATE TABLE IF NOT EXISTS fraud_predictions (
 conn.commit()
 
 
-# ----- Prometheus Metrics -----
+# Prometheus Metrics
 LATENCY = Histogram(
     "fraud_inference_latency_seconds",
     "Fraud prediction latency in seconds",
@@ -94,7 +111,7 @@ ACTIVE_MODEL = Gauge(
 )
 
 
-# ----- FastAPI App -----
+# FastAPI Application
 app = FastAPI(
     title="Fraud Detection API",
     description="Real-time credit card fraud detection service",
@@ -102,7 +119,7 @@ app = FastAPI(
 )
 
 
-# ----- Request/Response Schemas -----
+# Request/Response Models
 class Transaction(BaseModel):
     """Credit card transaction features for fraud detection."""
     amount: float = Field(..., ge=0, description="Transaction amount in dollars")
@@ -145,7 +162,7 @@ class FraudPrediction(BaseModel):
     timestamp: str
 
 
-# ----- Load Model -----
+# Model Loading
 try:
     model = joblib.load(MODEL_PATH)
     with open(FEATURE_ORDER_PATH) as f:

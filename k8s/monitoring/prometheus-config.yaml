@@ -74,8 +74,8 @@ data:
             action: replace
             target_label: kubernetes_pod_name
 
-      # Housing API specific
-      - job_name: 'housing-api'
+      # Fraud Detection API
+      - job_name: 'fraud-api'
         kubernetes_sd_configs:
           - role: pod
             namespaces:
@@ -84,38 +84,47 @@ data:
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_label_app]
             action: keep
-            regex: housing-api
+            regex: fraud-api
           - source_labels: [__meta_kubernetes_pod_container_port_number]
             action: keep
             regex: "8000"
 
   alerts.yml: |
     groups:
-      - name: mlops-alerts
+      - name: fraud-detection-alerts
         rules:
-          - alert: HighErrorRate
-            expr: rate(predictions_total{status="error"}[5m]) > 0.1
+          - alert: HighFraudErrorRate
+            expr: rate(fraud_predictions_total{status="error"}[5m]) > 0.1
             for: 5m
             labels:
               severity: critical
             annotations:
-              summary: High error rate in predictions
+              summary: High error rate in fraud predictions
               description: Error rate is above 10% for the last 5 minutes
 
-          - alert: HighLatency
-            expr: histogram_quantile(0.95, rate(inference_latency_seconds_bucket[5m])) > 1
+          - alert: HighFraudDetectionLatency
+            expr: histogram_quantile(0.95, rate(fraud_inference_latency_seconds_bucket[5m])) > 0.5
             for: 5m
             labels:
               severity: warning
             annotations:
-              summary: High inference latency
-              description: 95th percentile latency is above 1 second
+              summary: High fraud detection latency
+              description: 95th percentile latency is above 500ms
 
-          - alert: PodNotReady
+          - alert: HighFraudRate
+            expr: rate(fraud_transactions_flagged_total[1h]) / rate(fraud_predictions_total[1h]) > 0.1
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: Unusually high fraud rate detected
+              description: Fraud rate is above 10% for the last 15 minutes
+
+          - alert: FraudAPIPodNotReady
             expr: kube_pod_status_ready{namespace="devsecops-mlops", condition="true"} == 0
             for: 5m
             labels:
               severity: critical
             annotations:
-              summary: Pod not ready
+              summary: Fraud API pod not ready
               description: Pod {{ $labels.pod }} has been not ready for 5 minutes

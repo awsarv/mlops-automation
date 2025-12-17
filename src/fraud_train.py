@@ -1,7 +1,23 @@
 """
-Fraud Detection Model Training
-Trains a Random Forest classifier for credit card fraud detection.
-Includes MLflow tracking for experiment management.
+Fraud Detection Model Training Pipeline.
+
+This module implements the training pipeline for credit card fraud detection
+using ensemble machine learning methods. It supports multiple model types
+with MLflow experiment tracking for reproducibility.
+
+Training Pipeline:
+    1. Load and validate transaction dataset
+    2. Train multiple classifiers (Logistic Regression, Random Forest)
+    3. Evaluate models using fraud-specific metrics (F1, ROC-AUC)
+    4. Select best model based on F1 score
+    5. Register model in MLflow for deployment
+
+Models:
+    - Logistic Regression: Baseline model with class balancing
+    - Random Forest: Ensemble model for improved fraud detection
+
+Author: Arvind Kumar
+Version: 1.0.0
 """
 
 import os
@@ -27,7 +43,7 @@ from sklearn.metrics import (
 import joblib
 
 
-# MLflow configuration
+# MLflow Configuration
 mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "file:mlruns"))
 mlflow.set_experiment("Fraud-Detection-Classification")
 
@@ -67,7 +83,16 @@ results = []
 
 
 def run_and_log(model_name, model):
-    """Train model and log metrics to MLflow."""
+    """
+    Train a model and log metrics to MLflow.
+
+    Args:
+        model_name: Identifier for the model type
+        model: Sklearn classifier instance
+
+    Returns:
+        Tuple of (model_name, trained_model, f1_score, roc_auc)
+    """
     with mlflow.start_run(run_name=model_name):
         print(f"\n{'='*50}")
         print(f"Training {model_name}...")

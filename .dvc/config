@@ -1,5 +1,0 @@
-[core]
-    remote = myremote
-['remote "myremote"']
-    url = s3://mlops-grp13/mlops-app
-    region = ap-south-1

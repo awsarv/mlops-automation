@@ -1,13 +1,39 @@
 """
-Fraud Detection Data Preparation
-Generates synthetic credit card transaction data for fraud detection demo.
-In production, this would load real transaction data from a secure source.
+Fraud Detection Data Preparation Module.
+
+This module generates synthetic credit card transaction data for demonstrating
+the fraud detection pipeline. The synthetic data mimics realistic patterns
+observed in actual fraud scenarios.
+
+Data Characteristics:
+    - Legitimate transactions: Normal amounts, daytime hours, consistent patterns
+    - Fraudulent transactions: Higher amounts, unusual hours, inconsistent patterns
+
+Features Generated:
+    - amount: Transaction amount in dollars
+    - hour: Hour of transaction (0-23)
+    - day_of_week: Day of week (0-6)
+    - merchant_category: Merchant category code (0-14)
+    - distance_from_home: Distance from cardholder's home
+    - distance_from_last_transaction: Distance from previous transaction
+    - ratio_to_median_purchase: Ratio to median purchase amount
+    - repeat_retailer: Is repeat retailer (0/1)
+    - used_chip: Card chip used (0/1)
+    - used_pin: PIN used (0/1)
+    - online_order: Online transaction (0/1)
+
+Note: In production environments, this module would be replaced with
+secure data ingestion from transactional databases.
+
+Author: Arvind Kumar
+Version: 1.0.0
 """
 
 import numpy as np
 import pandas as pd
 import os
 
+# Set random seed for reproducibility
 np.random.seed(42)
 
 # Configuration
