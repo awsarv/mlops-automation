@@ -34,9 +34,13 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Create reports directory
+        run: mkdir -p reports
+
       - name: Install security tools
         run: |
-          pip install bandit safety pip-audit
+          pip install bandit pip-audit
+          pip install 'safety<3.0.0'  # Use older version compatible with the scan
 
       # --- Bandit: Python Static Security Analysis ---
       - name: Run Bandit (SAST)
@@ -63,9 +67,6 @@ jobs:
           safety check -r requirements.txt --json > reports/safety-report.json || true
           safety check -r requirements.txt || true
         continue-on-error: true
-
-      - name: Create reports directory
-        run: mkdir -p reports
 
       - name: Upload Security Reports
         uses: actions/upload-artifact@v4

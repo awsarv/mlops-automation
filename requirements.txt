@@ -15,7 +15,7 @@ pydantic==2.6.1
 # Monitoring
 prometheus-client==0.19.0
 
-# Security scanning (dev dependencies)
+# Security scanning (dev dependencies - installed separately in CI)
+# Note: safety 3.0.1 conflicts with pydantic 2.x, use safety separately
 bandit==1.7.7
-safety==3.0.1
 pip-audit==2.7.2
