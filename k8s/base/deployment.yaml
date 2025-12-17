@@ -90,3 +90,5 @@ spec:
           env:
             - name: AWS_REGION
               value: "ap-south-1"
+            - name: HOME
+              value: "/tmp"

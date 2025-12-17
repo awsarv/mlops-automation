@@ -215,15 +215,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Prepare data
-        run: python src/data_prep.py
+      - name: Prepare fraud detection data
+        run: python src/fraud_data_prep.py
 
-      - name: Train model
+      - name: Train fraud detection model
         env:
           MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
         run: |
           mkdir -p mlruns models
-          python src/train.py
+          python src/fraud_train.py
 
       - name: Upload model artifacts to S3
         run: |

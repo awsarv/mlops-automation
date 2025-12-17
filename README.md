@@ -1,6 +1,6 @@
 # DevSecOps Framework for Machine Learning
 
-## A Comprehensive Security-Integrated MLOps Pipeline
+## Fraud Detection with Security-Integrated MLOps Pipeline
 
 [![CI/CD Pipeline](https://github.com/awsarv/mlops-automation/actions/workflows/devsecops-pipeline.yaml/badge.svg)](https://github.com/awsarv/mlops-automation/actions)
 [![Security Scan](https://img.shields.io/badge/security-scanned-green.svg)](./docs/ml-threat-model.md)
@@ -53,7 +53,8 @@ This project implements a **DevSecOps Framework for Machine Learning** that inte
 ### ML Pipeline
 - **Data Versioning**: DVC with S3 backend
 - **Experiment Tracking**: MLflow
-- **Model Training**: scikit-learn (Linear Regression, Decision Tree)
+- **Model Training**: scikit-learn (Random Forest, Logistic Regression)
+- **Use Case**: Credit Card Fraud Detection (Binary Classification)
 - **API Service**: FastAPI with Prometheus metrics
 
 ### Infrastructure
@@ -162,24 +163,41 @@ The CI/CD pipeline includes:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/predict` | POST | Model inference |
+| `/predict` | POST | Fraud detection inference |
 | `/metrics` | GET | Prometheus metrics |
+| `/model/info` | GET | Model information |
+| `/stats` | GET | Prediction statistics |
 | `/docs` | GET | Swagger UI |
 
-### Example Request
+### Example Fraud Detection Request
 ```bash
 curl -X POST "http://<api-endpoint>/predict" \
   -H "Content-Type: application/json" \
   -d '{
-    "MedInc": 8.3252,
-    "HouseAge": 41.0,
-    "AveRooms": 6.984,
-    "AveBedrms": 1.023,
-    "Population": 322.0,
-    "AveOccup": 2.555,
-    "Latitude": 37.88,
-    "Longitude": -122.23
+    "amount": 1250.50,
+    "hour": 3,
+    "day_of_week": 5,
+    "merchant_category": 12,
+    "distance_from_home": 85.3,
+    "distance_from_last_transaction": 45.2,
+    "ratio_to_median_purchase": 4.5,
+    "repeat_retailer": 0,
+    "used_chip": 0,
+    "used_pin": 0,
+    "online_order": 1
   }'
+```
+
+### Example Response
+```json
+{
+  "transaction_id": "TXN-20251217123456789",
+  "fraud_probability": 0.8723,
+  "is_fraudulent": true,
+  "risk_level": "HIGH",
+  "recommendation": "BLOCK transaction. Require additional verification.",
+  "timestamp": "2025-12-17T12:34:56.789Z"
+}
 ```
 
 ---

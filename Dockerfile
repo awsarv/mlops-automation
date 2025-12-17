@@ -26,8 +26,8 @@ FROM python:3.10-slim-bookworm AS production
 
 # Security labels
 LABEL maintainer="Arvind Kumar <2023ac05606@wilp.bits-pilani.ac.in>"
-LABEL description="DevSecOps ML Pipeline - Housing Price Prediction API"
-LABEL version="1.0"
+LABEL description="DevSecOps ML Pipeline - Fraud Detection API"
+LABEL version="2.0"
 LABEL security.scan="enabled"
 
 # Security: Create non-root user
@@ -74,5 +74,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start application
-CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start application (Fraud Detection API)
+CMD ["uvicorn", "src.fraud_api:app", "--host", "0.0.0.0", "--port", "8000"]
