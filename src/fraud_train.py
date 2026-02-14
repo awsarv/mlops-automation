@@ -16,7 +16,6 @@ Models:
     - Logistic Regression: Baseline model with class balancing
     - Random Forest: Ensemble model for improved fraud detection
 
-Author: Arvind Kumar
 Version: 1.0.0
 """
 

@@ -62,3 +62,5 @@ reports/
 
 # EKS creation logs
 eks-creation.log
+test_mnist_model.py
+*.log

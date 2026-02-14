@@ -4,7 +4,6 @@ Unit tests for Fraud Detection API.
 This module contains tests for validating the fraud detection API
 endpoints and prediction logic.
 
-Author: Arvind Kumar
 Version: 1.0.0
 """
 

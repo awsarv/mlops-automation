@@ -16,7 +16,6 @@ Security Features:
     - Request logging for audit compliance
     - Structured error handling
 
-Author: Arvind Kumar
 Version: 1.0.0
 """
 

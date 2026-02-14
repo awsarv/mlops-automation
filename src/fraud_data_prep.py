@@ -25,7 +25,6 @@ Features Generated:
 Note: In production environments, this module would be replaced with
 secure data ingestion from transactional databases.
 
-Author: Arvind Kumar
 Version: 1.0.0
 """
 

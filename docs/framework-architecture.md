@@ -282,4 +282,3 @@ k8s/
 
 **Document Version**: 1.0
 **Last Updated**: December 2025
-**Author**: Arvind Kumar (2023AC05606)

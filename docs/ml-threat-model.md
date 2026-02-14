@@ -280,5 +280,4 @@ D
 
 - **Version**: 1.0
 - **Last Updated**: December 2025
-- **Author**: Arvind Kumar
 - **Review Status**: Draft for Mid-Semester Report

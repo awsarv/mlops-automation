@@ -12,8 +12,7 @@
 
 This project implements a **DevSecOps Framework for Machine Learning** that integrates automated security auditing and threat modeling into cloud-native CI/CD/CT pipelines. It demonstrates best practices for securing ML systems from development to production.
 
-**Dissertation Project**: M.Tech in AI/ML, BITS Pilani
-**Author**: Arvind Kumar (2023AC05606)
+A production-ready implementation demonstrating enterprise-grade ML security practices and cloud-native deployment strategies.
 
 ---
 
@@ -252,11 +251,6 @@ MIT License - see [LICENSE](./LICENSE)
 
 ---
 
-## Author
+## About
 
-**Arvind Kumar**
-M.Tech in AI/ML, BITS Pilani
-Student ID: 2023AC05606
-
-**Supervisor**: Dr. Sheela Verma (IIT BHU)
-**Examiner**: Dr. Pratibha Verma (Turing, USA)
+This project demonstrates production-grade DevSecOps practices for ML systems, combining security automation with cloud-native deployment on AWS EKS. Ideal for learning modern MLOps workflows and security-first development.
